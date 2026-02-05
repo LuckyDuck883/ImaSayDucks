@@ -2,41 +2,43 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Duckémon: Homestead Architect</title>
+    <title>Duckémon: Safari & Collection</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         :root { 
             --grass: #5fb35f; --water: #4a90e2; --accent: #f1c40f; 
-            --panel: rgba(15, 15, 25, 0.95); --wood: #8b4513;
+            --panel: rgba(10, 15, 30, 0.95); --border: #ecf0f1;
         }
-        
+        * { box-sizing: border-box; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; font-family: 'Press Start 2P', cursive; color: #fff; overflow: hidden; image-rendering: pixelated; }
 
         /* --- THE WORLD --- */
         #viewport { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
-        #world { position: absolute; transition: transform 0.1s; }
-        .tile { width: 64px; height: 64px; position: absolute; border: 1px solid rgba(255,255,255,0.01); }
-        .t-0 { background: var(--grass); } 
-        .t-1 { background: var(--water); }
+        #world { position: absolute; transition: transform 0.1s ease-out; }
+        .tile { width: 64px; height: 64px; position: absolute; border: 1px solid rgba(255,255,255,0.02); }
+        .t-0 { background: var(--grass); } .t-1 { background: var(--water); }
 
-        /* --- BUILDINGS --- */
-        .structure { 
-            position: absolute; width: 64px; height: 64px; 
-            background: var(--wood); border: 4px solid #5d2e0a; 
-            z-index: 10; display: flex; align-items: center; justify-content: center;
-            font-size: 8px; color: #fff;
+        /* --- SPRITES --- */
+        .pixel-duck {
+            width: 4px; height: 4px; background: transparent;
+            box-shadow: 8px 4px 0 var(--c), 12px 4px 0 var(--c), 16px 4px 0 var(--c), 8px 8px 0 var(--c), 12px 8px 0 var(--c), 16px 8px 0 var(--c), 20px 8px 0 #e67e22, 4px 12px 0 var(--c), 8px 12px 0 var(--c), 12px 12px 0 var(--c), 16px 12px 0 var(--c), 16px 4px 0 #000, 12px 8px 0 #ff6b6b;
+            position: absolute; transform: scale(3.5);
         }
 
-        /* --- UI --- */
-        .screen { display: none; position: absolute; inset: 0; z-index: 2000; background: var(--panel); flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
-        .modal { background: #1a1a2e; border: 4px solid #fff; padding: 25px; width: 500px; text-align: center; }
-        
-        #hud { position: absolute; bottom: 0; width: 100%; background: var(--panel); padding: 15px; display: flex; justify-content: space-around; font-size: 8px; border-top: 4px solid var(--accent); z-index: 1000; }
-        .btn { font-family: 'Press Start 2P'; padding: 10px; border: none; background: #fff; color: #000; cursor: pointer; font-size: 8px; margin: 2px; }
-
-        /* --- PLAYER --- */
         #player-container { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 100; }
-        .pixel-duck { width: 4px; height: 4px; background: transparent; box-shadow: 8px 4px 0 var(--c), 12px 4px 0 var(--c), 16px 4px 0 var(--c), 8px 8px 0 var(--c), 12px 8px 0 var(--c), 16px 8px 0 var(--c), 20px 8px 0 #e67e22, 4px 12px 0 var(--c), 8px 12px 0 var(--c), 12px 12px 0 var(--c), 16px 12px 0 var(--c), 16px 4px 0 #000, 12px 8px 0 #ff6b6b; position: absolute; transform: scale(3.5); }
+
+        /* --- UI MODALS --- */
+        .screen { display: none; position: absolute; inset: 0; z-index: 2000; background: var(--panel); flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(10px); }
+        .modal { background: #1a252f; border: 4px solid var(--border); padding: 30px; width: 550px; text-align: center; }
+        .btn { font-family: 'Press Start 2P'; padding: 12px; border: none; background: var(--border); color: #1a252f; cursor: pointer; font-size: 8px; margin: 5px; border-bottom: 4px solid #bdc3c7; }
+        .btn:hover { background: #fff; transform: scale(1.05); }
+
+        /* --- COLLECTION GRID --- */
+        #collection-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 20px; max-height: 300px; overflow-y: auto; }
+        .dex-entry { background: #111; padding: 10px; border: 1px solid #444; font-size: 6px; }
+
+        /* --- HUD --- */
+        #hud { position: absolute; bottom: 0; width: 100%; background: var(--panel); padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; z-index: 500; border-top: 4px solid var(--accent); }
     </style>
 </head>
 <body onload="init()">
@@ -45,99 +47,123 @@
     <div id="world"></div>
     <div id="player-container"><div class="pixel-duck" style="--c:var(--accent)"></div></div>
 
-    <div id="build-screen" class="screen">
+    <div id="encounter-screen" class="screen">
         <div class="modal">
-            <h2 style="color:var(--accent)">CONSTRUCTION</h2>
-            <p>RESOURCES: <span id="wood-count">0</span> WOOD</p>
-            <div style="display:grid; gap:10px;">
-                <button class="btn" onclick="build('cabin')">WOOD CABIN (10 WOOD)</button>
-                <button class="btn" onclick="build('nest')">WARM NEST (5 WOOD)</button>
+            <h2 id="e-name" style="color:var(--accent)">WILD DUCK</h2>
+            <div id="e-sprite-wrap" style="height: 150px; display: flex; justify-content: center; align-items: center;">
+                <div id="e-sprite-battle" class="pixel-duck" style="position:relative; transform:scale(10) scaleX(-1);"></div>
             </div>
+            <p id="e-rarity" style="font-size: 8px;"></p>
+            <div style="margin-top: 20px;">
+                <button class="btn" style="background:#2ecc71;" onclick="attemptCatch()">THROW SNAP-TRAP</button>
+                <button class="btn" onclick="run()">RUN AWAY</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="dex-screen" class="screen">
+        <div class="modal">
+            <h2 style="color:var(--accent)">DUCKÉDEX</h2>
+            <div id="collection-grid"></div>
             <br>
-            <button class="btn" onclick="toggleScreen('build-screen')">CLOSE</button>
+            <button class="btn" onclick="toggleScreen('dex-screen')">CLOSE</button>
         </div>
     </div>
 
     <div id="hud">
-        <div>🪵 <span class="res-wood">0</span> | 🥖 <span id="bread">0</span></div>
-        <button class="btn" onclick="toggleScreen('build-screen')">BUILD</button>
-        <div>POS: <span id="coords">0,0</span></div>
+        <div>🥖 <span id="bread-val">100</span> | CAUGHT: <span id="caught-count">0</span></div>
+        <div>
+            <button class="btn" onclick="toggleScreen('dex-screen')">MY DUCKS</button>
+        </div>
+        <div>COORD: <span id="coords">0,0</span></div>
     </div>
 </div>
 
 <script>
     let pos = { x: 0, y: 0 };
-    let resources = { wood: 20, bread: 100 };
-    let buildings = []; // Array to store {x, y, type}
+    let player = { bread: 100, caught: [] };
+    let wildDuck = null;
     let rendered = {};
+
+    const DUCK_TYPES = [
+        { name: "Neon-Quack", color: "#39ff14", rarity: "Common", chance: 0.7 },
+        { name: "Flame-Waddler", color: "#ff4500", rarity: "Uncommon", chance: 0.5 },
+        { name: "Aqua-Diver", color: "#00ffff", rarity: "Uncommon", chance: 0.5 },
+        { name: "Shadow-Beak", color: "#4b0082", rarity: "Rare", chance: 0.3 },
+        { name: "Golden-Legend", color: "#ffd700", rarity: "Mythic", chance: 0.1 }
+    ];
 
     function init() {
         renderMap();
         window.addEventListener('keydown', (e) => {
             if(document.querySelector('.screen[style*="flex"]')) return;
             const k = e.key.toLowerCase();
-            if(k === 'w') pos.y += 64;
-            if(k === 's') pos.y -= 64;
-            if(k === 'a') pos.x -= 64;
-            if(k === 'd') pos.x += 64;
-            
-            // Randomly find wood while walking
-            if(Math.random() < 0.1) {
-                resources.wood++;
-                updateUI();
+            if(['w','a','s','d'].includes(k)) {
+                pos.y += (k==='w'?64:k==='s'?-64:0);
+                pos.x += (k==='d'?64:k==='a'?-64:0);
+                renderMap();
+                if(Math.random() < 0.1) startEncounter();
             }
-            renderMap();
         });
-    }
-
-    function build(type) {
-        let cost = type === 'cabin' ? 10 : 5;
-        if(resources.wood >= cost) {
-            resources.wood -= cost;
-            const b = document.createElement('div');
-            b.className = 'structure';
-            b.innerText = type.toUpperCase();
-            b.style.left = pos.x + 'px';
-            b.style.top = -pos.y + 'px';
-            document.getElementById('world').appendChild(b);
-            buildings.push({x: pos.x, y: pos.y, type: type});
-            toggleScreen('build-screen');
-            updateUI();
-        } else {
-            alert("Need more wood! Keep walking to find some.");
-        }
     }
 
     function renderMap() {
         const world = document.getElementById('world');
         for (let i = -10; i < 10; i++) {
             for (let j = -10; j < 10; j++) {
-                let tx = Math.floor(pos.x / 64) + i;
-                let ty = Math.floor(pos.y / 64) + j;
-                let key = `${tx},${ty}`;
-                if (!rendered[key]) {
+                let tx = Math.floor(pos.x/64)+i, ty = Math.floor(pos.y/64)+j;
+                if (!rendered[`${tx},${ty}`]) {
                     const t = document.createElement('div');
-                    t.className = `tile t-${Math.abs(tx + ty) % 2}`;
-                    t.style.left = tx * 64 + 'px';
-                    t.style.top = -ty * 64 + 'px';
-                    world.appendChild(t);
-                    rendered[key] = true;
+                    t.className = `tile t-${Math.abs(tx+ty)%2}`;
+                    t.style.left = tx*64+'px'; t.style.top = -ty*64+'px';
+                    world.appendChild(t); rendered[`${tx},${ty}`] = true;
                 }
             }
         }
-        world.style.transform = `translate(${-pos.x + (window.innerWidth/2)}px, ${pos.y + (window.innerHeight/2)}px)`;
+        world.style.transform = `translate(${-pos.x+(window.innerWidth/2)}px, ${pos.y+(window.innerHeight/2)}px)`;
         document.getElementById('coords').innerText = `${Math.floor(pos.x/64)},${Math.floor(pos.y/64)}`;
     }
 
+    function startEncounter() {
+        wildDuck = DUCK_TYPES[Math.floor(Math.random() * DUCK_TYPES.length)];
+        document.getElementById('encounter-screen').style.display = 'flex';
+        document.getElementById('e-name').innerText = wildDuck.name.toUpperCase();
+        document.getElementById('e-rarity').innerText = `RARITY: ${wildDuck.rarity}`;
+        document.getElementById('e-sprite-battle').style.setProperty('--c', wildDuck.color);
+    }
+
+    function attemptCatch() {
+        if(Math.random() < wildDuck.chance) {
+            alert(`SUCCESS! You caught a ${wildDuck.name}!`);
+            player.caught.push({...wildDuck, date: new Date().toLocaleDateString()});
+            updateUI();
+            run();
+        } else {
+            alert("Oh no! It broke free and fled!");
+            run();
+        }
+    }
+
     function updateUI() {
-        document.querySelectorAll('.res-wood').forEach(el => el.innerText = resources.wood);
-        document.getElementById('wood-count').innerText = resources.wood;
-        document.getElementById('bread').innerText = resources.bread;
+        document.getElementById('caught-count').innerText = player.caught.length;
+        const grid = document.getElementById('collection-grid');
+        grid.innerHTML = '';
+        player.caught.forEach(d => {
+            grid.innerHTML += `<div class="dex-entry" style="border-left: 4px solid ${d.color}">
+                <strong>${d.name}</strong><br>${d.rarity}
+            </div>`;
+        });
     }
 
     function toggleScreen(id) {
         const s = document.getElementById(id);
         s.style.display = (s.style.display === 'flex') ? 'none' : 'flex';
+        updateUI();
+    }
+
+    function run() { 
+        wildDuck = null; 
+        document.getElementById('encounter-screen').style.display = 'none'; 
     }
 </script>
 </body>
