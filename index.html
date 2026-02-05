@@ -3,30 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Duck Quest: Persistent RPG</title>
+    <title>Duck Quest: Drip Edition</title>
     <style>
         :root { --water: #4cc9f0; --gold: #ffb703; --boss: #e63946; }
         body { font-family: 'Courier New', Courier, monospace; background: #222; color: white; text-align: center; margin: 0; overflow: hidden; }
         
-        #ui-bar { background: #333; padding: 15px; display: flex; justify-content: space-around; border-bottom: 4px solid var(--water); }
-        .stat-box { font-weight: bold; font-size: 1.2rem; }
+        /* UI and Layout */
+        #ui-bar { background: #333; padding: 10px; display: flex; justify-content: space-around; border-bottom: 4px solid var(--water); }
+        #game-world { position: relative; width: 90vw; height: 45vh; background: var(--water); margin: 15px auto; border-radius: 20px; border: 8px solid #0077b6; overflow: hidden; }
         
-        #game-world { position: relative; width: 90vw; height: 50vh; background: var(--water); margin: 20px auto; border-radius: 20px; border: 8px solid #0077b6; overflow: hidden; }
-        .boss-active { background: var(--boss) !important; animation: shake 0.5s infinite; }
-
-        @keyframes shake { 0% { transform: translate(1px, 1px); } 50% { transform: translate(-1px, -2px); } 100% { transform: translate(1px, 1px); } }
-
-        .duck, .boss { position: absolute; cursor: pointer; user-select: none; }
-        .duck { font-size: 50px; }
-        .boss { font-size: 150px; }
-
-        #boss-hp-container { display: none; width: 80%; background: #555; height: 20px; margin: 10px auto; border-radius: 10px; }
-        #boss-hp-fill { background: #ff0000; width: 100%; height: 100%; border-radius: 10px; }
-
-        #shop { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
-        .btn { background: var(--gold); border: none; padding: 10px; border-radius: 8px; cursor: pointer; font-weight: bold; margin-bottom: 5px; }
+        /* Customizer Modal */
+        #customizer { background: #444; padding: 15px; border-radius: 10px; display: inline-block; margin-top: 10px; border: 2px solid var(--gold); }
+        .swatch { display: inline-block; width: 30px; height: 30px; margin: 5px; cursor: pointer; border-radius: 50%; border: 2px solid white; }
         
-        #save-note { color: #b5e48c; font-size: 0.8rem; margin-top: 5px; opacity: 0; transition: opacity 0.5s; }
+        /* Duck Styling */
+        .duck-container { position: absolute; cursor: pointer; user-select: none; text-align: center; }
+        .duck-body { font-size: 50px; transition: filter 0.3s; }
+        .duck-hat { font-size: 25px; position: absolute; top: -15px; left: 12px; }
+        
+        .boss { font-size: 150px; position: absolute; left: 35%; top: 10%; }
+        #boss-hp-container { display: none; width: 80%; background: #555; height: 15px; margin: 5px auto; border-radius: 10px; }
+        #boss-hp-fill { background: var(--boss); width: 100%; height: 100%; border-radius: 10px; }
+
+        .btn { background: var(--gold); border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-weight: bold; margin: 5px; }
+        #save-note { color: #b5e48c; font-size: 0.8rem; opacity: 0; }
     </style>
 </head>
 <body>
@@ -37,48 +37,50 @@
         <div>📈 XP: <span id="xp">0</span>/<span id="next-lvl">10</span></div>
     </div>
 
-    <h2 id="status-msg">Quack to start!</h2>
     <div id="boss-hp-container"><div id="boss-hp-fill"></div></div>
-
     <div id="game-world"></div>
 
+    <div id="customizer">
+        <strong>🎨 Customize Your Catch:</strong><br>
+        <div class="swatch" style="background: yellow" onclick="changeColor('none')"></div>
+        <div class="swatch" style="background: #ff758f" onclick="changeColor('hue-rotate(300deg)')"></div>
+        <div class="swatch" style="background: #70e000" onclick="changeColor('hue-rotate(90deg)')"></div>
+        <div class="swatch" style="background: #7209b7" onclick="changeColor('hue-rotate(240deg)')"></div>
+        <br>
+        <button class="btn" onclick="changeHat('🤠')">Cowboy Hat (20🥖)</button>
+        <button class="btn" onclick="changeHat('👑')">Crown (100🥖)</button>
+        <button class="btn" onclick="changeHat('')">No Hat</button>
+    </div>
+
     <div id="shop">
-        <button class="btn" onclick="buyUpgrade('click')">Net (+1 Power) - <span id="cost-click">15</span>🥖</button>
-        <button class="btn" onclick="buyUpgrade('auto')">Auto-Trap (+1 Speed) - <span id="cost-auto">60</span>🥖</button>
-        <button class="btn" style="background:#ff4d4d" onclick="resetGame()">Hard Reset</button>
+        <button class="btn" onclick="buyUpgrade('click')">Net (+1 Pwr) - <span id="cost-click">15</span>🥖</button>
+        <button class="btn" onclick="buyUpgrade('auto')">Trap (+1 Spd) - <span id="cost-auto">60</span>🥖</button>
     </div>
     <div id="save-note">Progress Saved!</div>
 
     <script>
-        // --- INITIAL STATE ---
         let stats = {
-            bread: 0,
-            xp: 0,
-            lvl: 1,
-            xpToNext: 10,
-            clickPower: 1,
-            autoLevel: 0,
-            isBossMode: false
+            bread: 0, xp: 0, lvl: 1, xpToNext: 10, 
+            clickPower: 1, autoLevel: 0,
+            duckColor: 'none', duckHat: ''
         };
 
-        // --- CORE FUNCTIONS ---
         function init() {
-            const savedData = localStorage.getItem('duckQuestSave');
-            if (savedData) {
-                stats = JSON.parse(savedData);
-                // Restart auto-catchers based on saved level
+            const saved = localStorage.getItem('duckQuestRPG');
+            if (saved) {
+                stats = JSON.parse(saved);
                 for(let i=0; i < stats.autoLevel; i++) {
-                    setInterval(() => { if(!stats.isBossMode) gainXP(1); }, 2000);
+                    setInterval(() => { gainXP(1); }, 2000);
                 }
             }
             updateUI();
         }
 
-        function saveGame() {
-            localStorage.setItem('duckQuestSave', JSON.stringify(stats));
+        function save() {
+            localStorage.setItem('duckQuestRPG', JSON.stringify(stats));
             const note = document.getElementById('save-note');
             note.style.opacity = 1;
-            setTimeout(() => note.style.opacity = 0, 2000);
+            setTimeout(() => note.style.opacity = 0, 1000);
         }
 
         function updateUI() {
@@ -90,24 +92,46 @@
             document.getElementById('cost-auto').innerText = 60 + (stats.autoLevel * 20);
         }
 
-        function createDuck() {
-            if (stats.isBossMode) return;
-            const world = document.getElementById('game-world');
-            const duck = document.createElement('div');
-            duck.className = 'duck';
-            duck.innerHTML = '🦆';
-            duck.style.left = Math.random() * 80 + '%';
-            duck.style.top = Math.random() * 80 + '%';
+        function changeColor(filter) {
+            stats.duckColor = filter;
+            save();
+        }
 
-            duck.onclick = () => {
+        function changeHat(hat) {
+            let cost = hat === '🤠' ? 20 : (hat === '👑' ? 100 : 0);
+            if (stats.bread >= cost) {
+                stats.bread -= cost;
+                stats.duckHat = hat;
+                updateUI();
+                save();
+            } else {
+                alert("Not enough bread for that drip!");
+            }
+        }
+
+        function createDuck() {
+            const world = document.getElementById('game-world');
+            const container = document.createElement('div');
+            container.className = 'duck-container';
+            
+            // Apply Customizations
+            container.innerHTML = `
+                <div class="duck-hat">${stats.duckHat}</div>
+                <div class="duck-body" style="filter: ${stats.duckColor}">🦆</div>
+            `;
+            
+            container.style.left = Math.random() * 80 + '%';
+            container.style.top = Math.random() * 70 + '%';
+
+            container.onclick = () => {
                 gainXP(stats.clickPower);
                 stats.bread += Math.floor(Math.random() * 3) + 1;
-                duck.remove();
+                container.remove();
                 updateUI();
-                saveGame(); // Save every time they make progress
+                save();
             };
-            world.appendChild(duck);
-            setTimeout(() => duck.remove(), 2000);
+            world.appendChild(container);
+            setTimeout(() => container.remove(), 2500);
         }
 
         function gainXP(amount) {
@@ -115,66 +139,13 @@
             if (stats.xp >= stats.xpToNext) {
                 stats.lvl++;
                 stats.xp = 0;
-                stats.xpToNext = Math.floor(stats.xpToNext * 1.8);
-                if (stats.lvl % 5 === 0) startBossBattle();
+                stats.xpToNext = Math.floor(stats.xpToNext * 1.6);
             }
             updateUI();
         }
 
-        function startBossBattle() {
-            stats.isBossMode = true;
-            const world = document.getElementById('game-world');
-            world.classList.add('boss-active');
-            document.getElementById('status-msg').innerText = "⚠️ ELITE SWAN ⚠️";
-            document.getElementById('boss-hp-container').style.display = "block";
-            
-            let bossHP = 100 + (stats.lvl * 20);
-            let currentHP = bossHP;
-            
-            const boss = document.createElement('div');
-            boss.className = 'boss';
-            boss.innerHTML = '🦢';
-            boss.style.left = '35%'; boss.style.top = '10%';
-            
-            boss.onclick = () => {
-                currentHP -= (stats.clickPower * 5);
-                document.getElementById('boss-hp-fill').style.width = (currentHP / bossHP) * 100 + '%';
-                if (currentHP <= 0) {
-                    stats.isBossMode = false;
-                    stats.bread += (stats.lvl * 20);
-                    world.classList.remove('boss-active');
-                    document.getElementById('boss-hp-container').style.display = "none";
-                    document.getElementById('status-msg').innerText = "Victory! Bread Looted.";
-                    boss.remove();
-                    saveGame();
-                }
-            };
-            world.appendChild(boss);
-        }
-
-        function buyUpgrade(type) {
-            if (type === 'click' && stats.bread >= (15 + (stats.clickPower * 5))) {
-                stats.bread -= (15 + (stats.clickPower * 5));
-                stats.clickPower++;
-            } else if (type === 'auto' && stats.bread >= (60 + (stats.autoLevel * 20))) {
-                stats.bread -= (60 + (stats.autoLevel * 20));
-                stats.autoLevel++;
-                setInterval(() => { if(!stats.isBossMode) gainXP(1); }, 2000);
-            }
-            updateUI();
-            saveGame();
-        }
-
-        function resetGame() {
-            if(confirm("Clear all your bread and levels?")) {
-                localStorage.removeItem('duckQuestSave');
-                location.reload();
-            }
-        }
-
-        // Run game
         init();
-        setInterval(createDuck, 1000);
+        setInterval(createDuck, 1200);
     </script>
 </body>
 </html>
