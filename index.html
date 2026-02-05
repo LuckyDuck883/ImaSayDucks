@@ -3,160 +3,99 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Duckémon: Battle League</title>
+    <title>Duckémon: Level 100 Evolution</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
-        :root { --gb-green: #9bbc0f; --dark: #0f380f; --accent: #ffcc00; }
-        body { font-family: 'Press Start 2P', cursive; background: #111; color: white; text-align: center; font-size: 10px; margin: 0; }
+        :root { --gb-green: #9bbc0f; --dark: #0f380f; --gold: #ffd700; }
+        body { font-family: 'Press Start 2P', cursive; background: #000; color: white; text-align: center; font-size: 10px; margin: 0; }
         
-        /* Layout */
-        #game-screen { width: 95vw; max-width: 500px; height: 400px; background: var(--gb-green); border: 10px solid #333; margin: 10px auto; position: relative; overflow: hidden; color: var(--dark); }
-        #battle-ui { display: none; position: absolute; bottom: 0; width: 100%; height: 40%; background: #fff; border-top: 4px solid var(--dark); z-index: 10; padding: 10px; box-sizing: border-box; }
+        #game-screen { width: 95vw; max-width: 500px; height: 450px; background: var(--gb-green); border: 12px solid #444; margin: 10px auto; position: relative; overflow: hidden; color: var(--dark); }
         
-        /* Sprites */
-        .pixel-duck { width: 4px; height: 4px; transform: scale(3.5); position: absolute; transition: all 0.3s; }
-        .player-duck { bottom: 60px; left: 40px; transform: scale(4) scaleX(-1); }
-        .enemy-duck { top: 60px; right: 60px; transform: scale(5); }
-        
-        /* Box Shadow Sprite Logic */
+        /* The Pixel Sprite Engine */
+        .pixel-duck { width: 4px; height: 4px; position: absolute; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
         .sprite-data { box-shadow: 8px 4px black, 12px 4px black, 16px 4px black, 4px 8px black, 8px 8px var(--c), 12px 8px var(--c), 16px 8px var(--c), 20px 8px black, 4px 12px black, 8px 12px var(--c), 12px 12px var(--c), 16px 12px var(--c), 20px 12px var(--c), 24px 12px black, 4px 16px #f80, 8px 16px black, 12px 16px var(--c), 16px 16px var(--c), 20px 16px var(--c), 24px 16px black, 8px 20px black, 12px 20px var(--c), 16px 20px var(--c), 20px 20px black, 12px 24px black, 16px 24px black; }
 
-        /* UI Components */
-        .btn { background: #eee; border: 3px solid #000; padding: 8px; cursor: pointer; font-family: inherit; font-size: 8px; margin: 5px; }
-        .hp-bar { width: 100px; height: 10px; background: #444; border: 2px solid var(--dark); display: inline-block; }
-        .hp-fill { height: 100%; background: #2ecc71; transition: width 0.3s; }
+        /* Evolution Tiers */
+        .stage-1 { transform: scale(3); } /* Small */
+        .stage-2 { transform: scale(5); filter: drop-shadow(0 0 5px white); } /* Medium (Lv 25) */
+        .stage-3 { transform: scale(7); filter: drop-shadow(0 0 10px var(--gold)); } /* Large (Lv 50) */
+        .stage-god { transform: scale(10); animation: rainbow 2s infinite linear; } /* GOD (Lv 100) */
+
+        @keyframes rainbow {
+            0% { filter: hue-rotate(0deg) drop-shadow(0 0 20px gold); }
+            100% { filter: hue-rotate(360deg) drop-shadow(0 0 20px white); }
+        }
+
+        .battle-ui { position: absolute; bottom: 0; width: 100%; background: #fff; padding: 15px; border-top: 4px solid #000; box-sizing: border-box; }
+        .btn { background: #eee; border: 4px solid #000; padding: 10px; cursor: pointer; font-family: inherit; font-size: 10px; width: 80%; margin: 5px; }
+        .btn:hover { background: var(--gold); }
     </style>
 </head>
 <body>
 
     <div id="game-screen">
-        <div id="overworld"></div>
+        <h2 id="lvl-display" style="margin-top:20px;">LVL 1 DUCK</h2>
+        
+        <div id="duck-container" style="position: absolute; top: 40%; left: 40%;">
+            <div id="main-duck" class="pixel-duck sprite-data stage-1" style="--c:#ff0"></div>
+        </div>
 
-        <div id="battle-scene" style="display:none;">
-            <div style="position:absolute; top:20px; left:20px; text-align:left;">
-                <span id="enemy-name">BOSS</span><br>
-                <div class="hp-bar"><div id="enemy-hp" class="hp-fill" style="width:100%"></div></div>
-            </div>
-            
-            <div id="enemy-sprite-cont" class="pixel-duck enemy-duck sprite-data" style="--c:#f00"></div>
-            <div id="player-sprite-cont" class="pixel-duck player-duck sprite-data" style="--c:#ff0"></div>
-
-            <div style="position:absolute; bottom:20px; right:20px; text-align:right;">
-                <span id="player-duck-name">DUCKY</span><br>
-                <div class="hp-bar"><div id="player-hp" class="hp-fill" style="width:100%"></div></div>
-            </div>
-
-            <div id="battle-ui">
-                <div id="battle-msg" style="margin-bottom:10px;">What will DUCKY do?</div>
-                <button class="btn" onclick="attack()">QUACK ATTACK</button>
-                <button class="btn" onclick="evolveDuck()">EVOLVE</button>
-            </div>
+        <div class="battle-ui">
+            <div id="status">XP: 0 / 100</div>
+            <button class="btn" onclick="train()">QUACK TRAIN (+XP)</button>
+            <button class="btn" style="color:red" onclick="instant100()">GOD MODE (DEV)</button>
         </div>
     </div>
 
-    <div id="controls">
-        <p>BREAD: <span id="bread-count">0</span> | PARTY: <span id="party-size">0</span>/3</p>
-        <div id="party-list"></div>
-    </div>
+    <p>BREAD: <span id="bread">1000</span> | Click to train your Duck to Level 100!</p>
 
     <script>
-        let gameState = { bread: 0, party: [], enemyHP: 100, playerHP: 100 };
-        const colors = ['#FFD700', '#4cc9f0', '#ff4d4d', '#70e000', '#9d4edd'];
+        let duck = { lvl: 1, xp: 0, nextXp: 50, bread: 1000 };
 
-        function spawnOverworldDuck() {
-            if (document.getElementById('battle-scene').style.display === 'block') return;
-            const ow = document.getElementById('overworld');
-            const d = document.createElement('div');
-            const color = colors[Math.floor(Math.random()*colors.length)];
-            d.className = 'pixel-duck sprite-data';
-            d.style.cssText = `--c:${color}; left:${Math.random()*80}%; top:${Math.random()*60}%; cursor:pointer;`;
-            
-            d.onclick = () => {
-                if (gameState.party.length < 3) {
-                    let name = prompt("You caught it! Name your Duck:", "Quackers");
-                    gameState.party.push({ name: name || "Ducky", color: color, lvl: 1 });
-                    log(`Added ${name} to party!`);
-                } else {
-                    gameState.bread += 20;
-                    log("Party full! Converted to 20 Bread.");
-                }
-                d.remove();
-                updateUI();
-                if (gameState.party.length === 3) startBattle();
-            };
-            ow.appendChild(d);
-            setTimeout(() => d.remove(), 3000);
-        }
-
-        function startBattle() {
-            document.getElementById('overworld').style.display = 'none';
-            document.getElementById('battle-scene').style.display = 'block';
-            document.getElementById('battle-ui').style.display = 'block';
-            
-            const active = gameState.party[0];
-            document.getElementById('player-duck-name').innerText = active.name;
-            document.getElementById('player-sprite-cont').style.setProperty('--c', active.color);
-            gameState.enemyHP = 100;
-            gameState.playerHP = 100;
-            updateHP();
-        }
-
-        function attack() {
-            // Player attacks
-            let dmg = 15 + (gameState.party[0].lvl * 5);
-            gameState.enemyHP -= dmg;
-            log(`Enemy took ${dmg} damage!`);
-            
-            // Enemy attacks back
-            setTimeout(() => {
-                if (gameState.enemyHP <= 0) {
-                    log("VICTORY! Gained 100 Bread.");
-                    gameState.bread += 100;
-                    endBattle();
-                    return;
-                }
-                gameState.playerHP -= 10;
-                log("Enemy used PECK! -10HP");
-                updateHP();
-                if (gameState.playerHP <= 0) {
-                    log("Your duck fainted! Resetting party.");
-                    gameState.party = [];
-                    endBattle();
-                }
-            }, 800);
-            updateHP();
-        }
-
-        function evolveDuck() {
-            if (gameState.bread >= 50) {
-                gameState.bread -= 50;
-                gameState.party[0].lvl++;
-                log(`${gameState.party[0].name} evolved to Lv.${gameState.party[0].lvl}!`);
-                updateUI();
-            } else {
-                log("Need 50 Bread to evolve!");
+        function train() {
+            duck.xp += 20;
+            if (duck.xp >= duck.nextXp) {
+                levelUp();
             }
-        }
-
-        function endBattle() {
-            document.getElementById('battle-scene').style.display = 'none';
-            document.getElementById('overworld').style.display = 'block';
             updateUI();
         }
 
-        function updateHP() {
-            document.getElementById('enemy-hp').style.width = gameState.enemyHP + '%';
-            document.getElementById('player-hp').style.width = gameState.playerHP + '%';
+        function levelUp() {
+            duck.lvl++;
+            duck.xp = 0;
+            duck.nextXp = Math.floor(duck.nextXp * 1.1); // XP curve
+            
+            const sprite = document.getElementById('main-duck');
+            
+            // Evolution Logic
+            if (duck.lvl >= 100) {
+                sprite.className = "pixel-duck sprite-data stage-god";
+                alert("ASCENSION REACHED! YOUR DUCK IS NOW A DEITY.");
+            } else if (duck.lvl >= 50) {
+                sprite.className = "pixel-duck sprite-data stage-3";
+            } else if (duck.lvl >= 25) {
+                sprite.className = "pixel-duck sprite-data stage-2";
+            }
+        }
+
+        function instant100() {
+            duck.lvl = 100;
+            levelUp();
+            updateUI();
         }
 
         function updateUI() {
-            document.getElementById('bread-count').innerText = gameState.bread;
-            document.getElementById('party-size').innerText = gameState.party.length;
+            document.getElementById('lvl-display').innerText = `LVL ${duck.lvl} DUCK`;
+            document.getElementById('status').innerText = `XP: ${duck.xp} / ${duck.nextXp}`;
+            
+            // Change color based on level
+            const sprite = document.getElementById('main-duck');
+            if (duck.lvl < 25) sprite.style.setProperty('--c', '#ff0');
+            else if (duck.lvl < 50) sprite.style.setProperty('--c', '#4cc9f0');
+            else if (duck.lvl < 100) sprite.style.setProperty('--c', '#ff4d4d');
         }
 
-        function log(m) { document.getElementById('battle-msg').innerText = m; }
-
-        setInterval(spawnOverworldDuck, 2000);
+        updateUI();
     </script>
 </body>
 </html>
