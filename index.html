@@ -2,22 +2,27 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Duckémon: Titan Edition</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Duckémon: Titan Mobile</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         :root { 
             --grass: #5fb35f; --water: #4a90e2; --accent: #f1c40f; 
-            --panel: rgba(10, 10, 20, 0.98); --border: #ecf0f1;
+            --panel: rgba(10, 10, 25, 0.98); --border: #ecf0f1;
         }
-        * { box-sizing: border-box; }
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; font-family: 'Press Start 2P', cursive; color: #fff; overflow: hidden; image-rendering: pixelated; }
+        * { box-sizing: border-box; touch-action: manipulation; }
+        body, html { 
+            margin: 0; padding: 0; width: 100%; height: 100%; 
+            background: #000; font-family: 'Press Start 2P', cursive; 
+            color: #fff; overflow: hidden; image-rendering: pixelated; 
+        }
 
-        /* --- WORLD & ATMOSPHERE --- */
+        /* --- THE WORLD --- */
         #viewport { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
-        #time-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 900; transition: background 5s; }
-        #world { position: absolute; transition: transform 0.1s ease-out; }
+        #world { position: absolute; transition: transform 0.15s ease-out; }
         .tile { width: 64px; height: 64px; position: absolute; border: 1px solid rgba(255,255,255,0.02); }
         .t-0 { background: var(--grass); } .t-1 { background: var(--water); }
+        #time-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 900; transition: background 5s; }
 
         /* --- SPRITES --- */
         .pixel-duck {
@@ -27,23 +32,27 @@
         }
         #player-container { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 100; }
 
+        /* --- MOBILE CONTROLS --- */
+        #d-pad { 
+            position: absolute; bottom: 100px; left: 20px; z-index: 1500; 
+            display: grid; grid-template-columns: repeat(3, 50px); gap: 5px;
+        }
+        .d-btn { 
+            width: 50px; height: 50px; background: rgba(255,255,255,0.2); 
+            border: 2px solid #fff; display: flex; align-items: center; justify-content: center; font-size: 12px;
+        }
+
         /* --- UI MODALS --- */
-        .screen { display: none; position: absolute; inset: 0; z-index: 2000; background: var(--panel); flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(10px); }
-        .modal { background: #111; border: 4px solid var(--border); padding: 25px; width: 85%; max-width: 700px; max-height: 80vh; overflow-y: auto; text-align: center; }
+        .screen { display: none; position: absolute; inset: 0; z-index: 2000; background: var(--panel); flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(10px); padding: 10px; }
+        .modal { background: #111; border: 4px solid var(--border); padding: 15px; width: 95%; max-width: 600px; max-height: 90vh; overflow-y: auto; text-align: center; }
         
-        .skill-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
-        .card { background: #222; border: 1px solid #444; padding: 10px; font-size: 8px; cursor: pointer; text-align: left; }
-        .card:hover { border-color: var(--accent); }
-        .bought { border-color: #2ecc71 !important; background: #112211; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 15px; }
+        .card { background: #222; border: 1px solid #444; padding: 8px; font-size: 7px; text-align: left; }
+        .bought { border-color: #2ecc71; background: #0a1a0a; }
 
         /* --- HUD --- */
-        #hud { position: absolute; bottom: 0; width: 100%; background: var(--panel); padding: 15px; display: flex; justify-content: space-around; align-items: center; font-size: 8px; border-top: 4px solid var(--accent); z-index: 1100; }
-        .btn { font-family: 'Press Start 2P'; padding: 10px; border: none; background: var(--border); color: #000; cursor: pointer; font-size: 8px; }
-        .btn:hover { background: #fff; transform: scale(1.05); }
-
-        /* --- FLOATING TEXT --- */
-        .float-txt { position: absolute; color: var(--accent); font-size: 10px; pointer-events: none; animation: floatUp 0.8s forwards; z-index: 3000; }
-        @keyframes floatUp { 0% { opacity: 1; transform: translateY(0); } 100% { opacity: 0; transform: translateY(-50px); } }
+        #hud { position: absolute; bottom: 0; width: 100%; background: var(--panel); padding: 10px; display: flex; justify-content: space-around; align-items: center; font-size: 7px; border-top: 3px solid var(--accent); z-index: 1100; }
+        .btn { font-family: 'Press Start 2P'; padding: 8px; border: none; background: var(--border); color: #000; font-size: 7px; cursor: pointer; }
     </style>
 </head>
 <body onload="init()">
@@ -53,197 +62,125 @@
     <div id="world"></div>
     <div id="player-container"><div class="pixel-duck" style="--c:var(--accent)"></div></div>
 
+    <div id="d-pad">
+        <div></div><div class="d-btn" onclick="move(0, 64)">↑</div><div></div>
+        <div class="d-btn" onclick="move(-64, 0)">←</div><div class="d-btn" onclick="move(0, -64)">↓</div><div class="d-btn" onclick="move(64, 0)">→</div>
+    </div>
+
     <div id="battle-screen" class="screen">
         <div class="modal">
-            <h2 id="e-name" style="color:var(--accent)">WILD ENCOUNTER</h2>
-            <div id="e-sprite-battle" class="pixel-duck" onclick="clickDmg(event)" style="position:relative; transform:scale(12) scaleX(-1); margin: 60px auto; cursor:crosshair;"></div>
-            <div style="width: 100%; height: 20px; background: #222; border: 2px solid #fff; margin-bottom: 10px;">
-                <div id="e-hp" style="height:100%; background:#e74c3c; width:100%;"></div>
+            <h2 id="e-name" style="font-size: 12px; color:var(--accent);">WILD DUCK</h2>
+            <div id="e-sprite-battle" class="pixel-duck" onclick="clickDmg(event)" style="position:relative; transform:scale(8); margin: 50px auto;"></div>
+            <div style="width: 100%; height: 15px; background: #222; border: 2px solid #fff;"><div id="e-hp" style="height:100%; background:#e74c3c; width:100%;"></div></div>
+            <div class="grid">
+                <button class="btn" style="background:#2ecc71" onclick="attemptCatch()">CATCH</button>
+                <button class="btn" onclick="run()">RUN</button>
             </div>
-            <button class="btn" onclick="attemptCatch()" style="background:#2ecc71;">THROW TRAP</button>
-            <button class="btn" onclick="run()">RUN</button>
         </div>
     </div>
 
-    <div id="skill-screen" class="screen">
+    <div id="menu-screen" class="screen">
         <div class="modal">
-            <h2 style="color:var(--accent)">SKILL TREE</h2>
-            <p>POINTS: <span id="sp-val">0</span></p>
-            <div class="skill-grid" id="skill-content"></div>
-            <br><button class="btn" onclick="toggleScreen('skill-screen')">CLOSE</button>
-        </div>
-    </div>
-
-    <div id="shop-screen" class="screen">
-        <div class="modal">
-            <h2 style="color:var(--accent)">MEGA MART</h2>
-            <p>BREAD: <span class="bread-val">0</span></p>
-            <div class="skill-grid">
-                <div class="card" onclick="buyMart('egg', 200)">MYSTERY EGG (200🥖)<br>Walk to hatch new stats!</div>
-                <div class="card" onclick="buyMart('auto', 500)">AUTO-QUACKER (500🥖)<br>Clicks for you!</div>
-                <div class="card" onclick="buyMart('speed', 1000)">ROCKET SHOES (1000🥖)<br>Perm speed boost!</div>
+            <h2 style="color:var(--accent)">MENU</h2>
+            <p style="font-size:8px">BREAD: <span class="bread-val">0</span> | SP: <span id="sp-val">0</span></p>
+            <div class="grid" id="menu-content">
+                <div class="card" onclick="buy('egg', 200)">EGG (200🥖)<br>50 steps to hatch.</div>
+                <div class="card" onclick="buy('auto', 500)">AUTO (500🥖)<br>Dps +5.</div>
+                <div class="card" onclick="learn('crit')">CRIT (1 SP)<br>10% x2 Dmg.</div>
             </div>
-            <br><button class="btn" onclick="toggleScreen('shop-screen')">CLOSE</button>
+            <br><button class="btn" onclick="toggleScreen('menu-screen')">BACK</button>
         </div>
     </div>
 
     <div id="hud">
-        <div>🥖 <span class="bread-val">0</span> | 👟 <span id="steps">0</span></div>
-        <div>
-            <button class="btn" onclick="toggleScreen('skill-screen')">SKILLS</button>
-            <button class="btn" onclick="toggleScreen('shop-screen')">SHOP</button>
-        </div>
-        <div>LVL: <span id="p-lvl">1</span> | SP: <span id="p-sp">0</span></div>
+        <div>🥖 <span class="bread-val">0</span></div>
+        <button class="btn" onclick="toggleScreen('menu-screen')">SHOP/SKILLS</button>
+        <div>LVL: <span id="p-lvl">1</span></div>
     </div>
 </div>
 
 <script>
-    let player = JSON.parse(localStorage.getItem('duckMasterSave')) || {
-        bread: 100, lvl: 1, sp: 0, steps: 0, atk: 5, wins: 0,
-        skills: [], autos: 0, speed: 1, eggSteps: 0
-    };
-    let pos = { x: 0, y: 0 };
-    let enemy = null;
-    let rendered = {};
-
-    const SKILLS = [
-        { id: 'crit', name: 'Critical Hit', desc: '10% chance for 2x DMG', cost: 1 },
-        { id: 'magnet', name: 'Bread Magnet', desc: '+50% win rewards', cost: 1 },
-        { id: 'titan', name: 'Titan Clicks', desc: '+10 Base Attack', cost: 2 }
-    ];
+    let p = JSON.parse(localStorage.getItem('duckTitan')) || { bread: 100, lvl: 1, sp: 0, steps: 0, atk: 5, skills: [], autos: 0, egg: 0 };
+    let pos = { x: 0, y: 0 }, rendered = {}, enemy = null;
 
     function init() {
-        renderMap();
-        buildSkills();
-        setInterval(autoLogic, 1000);
-        setInterval(updateClock, 5000);
+        render(); setInterval(() => { if(enemy && p.autos) { enemy.hp -= p.autos; checkWin(); } }, 1000);
         window.addEventListener('keydown', e => {
-            if(document.querySelector('.screen[style*="flex"]')) return;
-            const s = 64 * player.speed;
-            if(e.key.toLowerCase()==='w') pos.y+=s;
-            if(e.key.toLowerCase()==='s') pos.y-=s;
-            if(e.key.toLowerCase()==='a') pos.x-=s;
-            if(e.key.toLowerCase()==='d') pos.x+=s;
-            player.steps++;
-            if(player.eggSteps > 0) {
-                player.eggSteps--;
-                if(player.eggSteps === 0) { player.lvl++; player.sp++; alert("EGG HATCHED! +1 Level/SP"); }
-            }
-            renderMap();
-            if(Math.random() < 0.08) startBattle();
-            save();
+            const k = e.key.toLowerCase();
+            if(k==='w') move(0,64); if(k==='s') move(0,-64);
+            if(k==='a') move(-64,0); if(k==='d') move(64,0);
         });
     }
 
-    function buildSkills() {
-        const cont = document.getElementById('skill-content');
-        cont.innerHTML = '';
-        SKILLS.forEach(s => {
-            const bought = player.skills.includes(s.id);
-            cont.innerHTML += `<div class="card ${bought?'bought':''}" onclick="buySkill('${s.id}', ${s.cost})">
-                <strong>${s.name}</strong> (${s.cost} SP)<br>${s.desc}</div>`;
-        });
-    }
-
-    function buySkill(id, cost) {
-        if(player.sp >= cost && !player.skills.includes(id)) {
-            player.sp -= cost; player.skills.push(id);
-            if(id === 'titan') player.atk += 10;
-            buildSkills(); updateUI(); save();
-        }
-    }
-
-    function buyMart(type, cost) {
-        if(player.bread >= cost) {
-            player.bread -= cost;
-            if(type === 'egg') player.eggSteps = 50;
-            if(type === 'auto') player.autos += 5;
-            if(type === 'speed') player.speed = 1.5;
-            updateUI(); save();
-            alert("Purchased!");
-        }
+    function move(mx, my) {
+        if(document.querySelector('.screen[style*="flex"]')) return;
+        pos.x += mx; pos.y += my; p.steps++;
+        if(p.egg > 0) { p.egg--; if(p.egg===0){ p.lvl++; p.sp++; alert("HATCHED!"); } }
+        render();
+        if(Math.random() < 0.08) startBattle();
+        save();
     }
 
     function startBattle() {
+        enemy = { hp: 100 + (p.lvl*10), max: 100 + (p.lvl*10) };
         document.getElementById('battle-screen').style.display = 'flex';
-        enemy = { hp: 100 + (player.lvl*20), max: 100 + (player.lvl*20), color: '#'+(Math.random()*0xFFFFFF<<0).toString(16) };
-        document.getElementById('e-sprite-battle').style.setProperty('--c', enemy.color);
+        document.getElementById('e-sprite-battle').style.setProperty('--c', '#'+(Math.random()*0xFFFFFF<<0).toString(16));
     }
 
-    function clickDmg(e) {
-        if(!enemy) return;
-        let d = player.atk;
-        if(player.skills.includes('crit') && Math.random() < 0.1) d *= 2;
-        enemy.hp -= d;
-        player.bread += 1;
-        createFloat(e.clientX, e.clientY, "+1🥖");
-        checkWin();
-    }
-
-    function autoLogic() {
-        if(enemy && player.autos > 0) { enemy.hp -= player.autos; checkWin(); }
+    function clickDmg() {
+        let d = p.atk; if(p.skills.includes('crit') && Math.random() < 0.1) d *= 2;
+        enemy.hp -= d; p.bread += 1; checkWin();
     }
 
     function checkWin() {
-        if(enemy && enemy.hp <= 0) {
-            let rew = 50 + (player.lvl * 5);
-            if(player.skills.includes('magnet')) rew *= 1.5;
-            player.bread += Math.floor(rew);
-            player.wins++;
-            if(player.wins % 5 === 0) { player.lvl++; player.sp++; }
-            run();
-        }
+        if(enemy && enemy.hp <= 0) { p.bread += 50; p.lvl++; p.sp++; run(); }
         updateUI();
     }
 
-    function attemptCatch() {
-        if(Math.random() > 0.6) { alert("Caught!"); run(); } else { alert("Fled!"); run(); }
+    function buy(type, cost) {
+        if(p.bread >= cost) {
+            p.bread -= cost;
+            if(type === 'egg') p.egg = 50;
+            if(type === 'auto') p.autos += 5;
+            updateUI(); save();
+        }
     }
 
-    function updateClock() {
-        const hr = new Date().getHours();
-        const over = document.getElementById('time-overlay');
-        over.style.background = (hr >= 19 || hr <= 6) ? "rgba(0,0,50,0.4)" : "transparent";
+    function learn(id) {
+        if(p.sp >= 1 && !p.skills.includes(id)) { p.sp--; p.skills.push(id); updateUI(); save(); }
     }
 
-    function renderMap() {
-        const world = document.getElementById('world');
-        for (let i = -8; i < 8; i++) {
-            for (let j = -8; j < 8; j++) {
+    function render() {
+        const w = document.getElementById('world');
+        for(let i=-6; i<6; i++) {
+            for(let j=-6; j<6; j++) {
                 let tx = Math.floor(pos.x/64)+i, ty = Math.floor(pos.y/64)+j;
-                if (!rendered[`${tx},${ty}`]) {
+                if(!rendered[`${tx},${ty}`]) {
                     const t = document.createElement('div');
                     t.className = `tile t-${Math.abs(tx+ty)%2}`;
                     t.style.left = tx*64+'px'; t.style.top = -ty*64+'px';
-                    world.appendChild(t); rendered[`${tx},${ty}`] = true;
+                    w.appendChild(t); rendered[`${tx},${ty}`] = true;
                 }
             }
         }
-        world.style.transform = `translate(${-pos.x+(window.innerWidth/2)}px, ${pos.y+(window.innerHeight/2)}px)`;
+        w.style.transform = `translate(${-pos.x+(window.innerWidth/2)}px, ${pos.y+(window.innerHeight/2)}px)`;
         updateUI();
     }
 
-    function createFloat(x, y, txt) {
-        const el = document.createElement('div'); el.className = 'float-txt'; el.innerText = txt;
-        el.style.left = x+'px'; el.style.top = y+'px'; document.body.appendChild(el);
-        setTimeout(() => el.remove(), 800);
-    }
-
     function updateUI() {
-        document.querySelectorAll('.bread-val').forEach(e => e.innerText = player.bread);
-        document.getElementById('steps').innerText = player.steps;
-        document.getElementById('p-lvl').innerText = player.lvl;
-        document.getElementById('p-sp').innerText = player.sp;
-        document.getElementById('sp-val').innerText = player.sp;
-        if(enemy) document.getElementById('e-hp').style.width = (enemy.hp / enemy.max * 100) + '%';
+        document.querySelectorAll('.bread-val').forEach(e => e.innerText = p.bread);
+        document.getElementById('p-lvl').innerText = p.lvl;
+        document.getElementById('sp-val').innerText = p.sp;
+        if(enemy) document.getElementById('e-hp').style.width = (enemy.hp/enemy.max*100)+'%';
     }
 
     function toggleScreen(id) {
         const s = document.getElementById(id);
-        s.style.display = (s.style.display === 'flex') ? 'none' : 'flex';
+        s.style.display = (s.style.display==='flex') ? 'none' : 'flex';
     }
 
-    function save() { localStorage.setItem('duckMasterSave', JSON.stringify(player)); }
+    function attemptCatch() { if(Math.random() > 0.5) { alert("Caught!"); run(); } else { alert("Fled!"); run(); } }
+    function save() { localStorage.setItem('duckTitan', JSON.stringify(p)); }
     function run() { enemy = null; document.getElementById('battle-screen').style.display = 'none'; updateUI(); }
 </script>
 </body>
