@@ -3,27 +3,25 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Duck Quest: Drip Edition</title>
+    <title>Duck Quest: Bestiary Hunter</title>
     <style>
-        :root { --water: #4cc9f0; --gold: #ffb703; --boss: #e63946; }
-        body { font-family: 'Courier New', Courier, monospace; background: #222; color: white; text-align: center; margin: 0; overflow: hidden; }
+        :root { --water: #4cc9f0; --gold: #ffb703; --boss: #e63946; --rare: #9d4edd; }
+        body { font-family: 'Courier New', Courier, monospace; background: #222; color: white; text-align: center; margin: 0; }
         
-        /* UI and Layout */
         #ui-bar { background: #333; padding: 10px; display: flex; justify-content: space-around; border-bottom: 4px solid var(--water); }
-        #game-world { position: relative; width: 90vw; height: 45vh; background: var(--water); margin: 15px auto; border-radius: 20px; border: 8px solid #0077b6; overflow: hidden; }
+        #game-world { position: relative; width: 90vw; height: 40vh; background: var(--water); margin: 15px auto; border-radius: 20px; border: 8px solid #0077b6; overflow: hidden; }
         
-        /* Customizer Modal */
-        #customizer { background: #444; padding: 15px; border-radius: 10px; display: inline-block; margin-top: 10px; border: 2px solid var(--gold); }
-        .swatch { display: inline-block; width: 30px; height: 30px; margin: 5px; cursor: pointer; border-radius: 50%; border: 2px solid white; }
-        
-        /* Duck Styling */
-        .duck-container { position: absolute; cursor: pointer; user-select: none; text-align: center; }
-        .duck-body { font-size: 50px; transition: filter 0.3s; }
-        .duck-hat { font-size: 25px; position: absolute; top: -15px; left: 12px; }
-        
-        .boss { font-size: 150px; position: absolute; left: 35%; top: 10%; }
-        #boss-hp-container { display: none; width: 80%; background: #555; height: 15px; margin: 5px auto; border-radius: 10px; }
-        #boss-hp-fill { background: var(--boss); width: 100%; height: 100%; border-radius: 10px; }
+        /* Bestiary Styles */
+        #bestiary-overlay { display: none; position: fixed; top: 10%; left: 10%; width: 80%; height: 80%; background: rgba(0,0,0,0.95); border: 4px solid var(--gold); border-radius: 20px; z-index: 100; overflow-y: auto; padding: 20px; }
+        .bestiary-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 15px; margin-top: 20px; }
+        .bestiary-item { background: #444; padding: 10px; border-radius: 10px; border: 1px solid #666; font-size: 0.8rem; }
+        .unlocked { border-color: var(--gold); background: #555; }
+        .locked { filter: grayscale(1) brightness(0.5); }
+
+        .duck-container { position: absolute; cursor: pointer; user-select: none; }
+        .duck-body { font-size: 50px; }
+        .rare-sparkle { animation: sparkle 0.5s infinite; }
+        @keyframes sparkle { 0% { filter: brightness(1); } 50% { filter: brightness(1.8); } 100% { filter: brightness(1); } }
 
         .btn { background: var(--gold); border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-weight: bold; margin: 5px; }
         #save-note { color: #b5e48c; font-size: 0.8rem; opacity: 0; }
@@ -34,22 +32,15 @@
     <div id="ui-bar">
         <div>⭐ Lvl: <span id="lvl">1</span></div>
         <div>🍞 Bread: <span id="bread">0</span></div>
-        <div>📈 XP: <span id="xp">0</span>/<span id="next-lvl">10</span></div>
+        <button class="btn" onclick="toggleBestiary()">📖 Bestiary</button>
     </div>
 
-    <div id="boss-hp-container"><div id="boss-hp-fill"></div></div>
     <div id="game-world"></div>
 
-    <div id="customizer">
-        <strong>🎨 Customize Your Catch:</strong><br>
-        <div class="swatch" style="background: yellow" onclick="changeColor('none')"></div>
-        <div class="swatch" style="background: #ff758f" onclick="changeColor('hue-rotate(300deg)')"></div>
-        <div class="swatch" style="background: #70e000" onclick="changeColor('hue-rotate(90deg)')"></div>
-        <div class="swatch" style="background: #7209b7" onclick="changeColor('hue-rotate(240deg)')"></div>
-        <br>
-        <button class="btn" onclick="changeHat('🤠')">Cowboy Hat (20🥖)</button>
-        <button class="btn" onclick="changeHat('👑')">Crown (100🥖)</button>
-        <button class="btn" onclick="changeHat('')">No Hat</button>
+    <div id="bestiary-overlay">
+        <h2>🦆 Master Bestiary</h2>
+        <div class="bestiary-grid" id="bestiary-list"></div>
+        <br><button class="btn" onclick="toggleBestiary()">Close Journal</button>
     </div>
 
     <div id="shop">
@@ -59,93 +50,109 @@
     <div id="save-note">Progress Saved!</div>
 
     <script>
+        const DUCK_TYPES = [
+            { id: 'common', name: 'Puddle Paddler', icon: '🦆', chance: 0.7 },
+            { id: 'rare', name: 'Purple Peeper', icon: '🦆', color: 'hue-rotate(280deg)', chance: 0.2 },
+            { id: 'epic', name: 'Neon Quacker', icon: '🦆', color: 'hue-rotate(150deg)', sparkle: true, chance: 0.08 },
+            { id: 'legendary', name: 'The Golden Honk', icon: '🦢', color: 'sepia(1) saturate(10) hue-rotate(10deg)', sparkle: true, chance: 0.02 }
+        ];
+
         let stats = {
             bread: 0, xp: 0, lvl: 1, xpToNext: 10, 
             clickPower: 1, autoLevel: 0,
-            duckColor: 'none', duckHat: ''
+            discovered: [] // Array of IDs
         };
 
         function init() {
-            const saved = localStorage.getItem('duckQuestRPG');
-            if (saved) {
-                stats = JSON.parse(saved);
-                for(let i=0; i < stats.autoLevel; i++) {
-                    setInterval(() => { gainXP(1); }, 2000);
-                }
-            }
+            const saved = localStorage.getItem('duckQuestBestiary');
+            if (saved) stats = JSON.parse(saved);
             updateUI();
+            updateBestiaryUI();
         }
 
         function save() {
-            localStorage.setItem('duckQuestRPG', JSON.stringify(stats));
+            localStorage.setItem('duckQuestBestiary', JSON.stringify(stats));
             const note = document.getElementById('save-note');
             note.style.opacity = 1;
-            setTimeout(() => note.style.opacity = 0, 1000);
-        }
-
-        function updateUI() {
-            document.getElementById('bread').innerText = stats.bread;
-            document.getElementById('xp').innerText = stats.xp;
-            document.getElementById('lvl').innerText = stats.lvl;
-            document.getElementById('next-lvl').innerText = stats.xpToNext;
-            document.getElementById('cost-click').innerText = 15 + (stats.clickPower * 5);
-            document.getElementById('cost-auto').innerText = 60 + (stats.autoLevel * 20);
-        }
-
-        function changeColor(filter) {
-            stats.duckColor = filter;
-            save();
-        }
-
-        function changeHat(hat) {
-            let cost = hat === '🤠' ? 20 : (hat === '👑' ? 100 : 0);
-            if (stats.bread >= cost) {
-                stats.bread -= cost;
-                stats.duckHat = hat;
-                updateUI();
-                save();
-            } else {
-                alert("Not enough bread for that drip!");
-            }
+            setTimeout(() => note.style.opacity = 0, 800);
         }
 
         function createDuck() {
+            const rand = Math.random();
+            let cumulative = 0;
+            let type = DUCK_TYPES[0];
+
+            for (let t of DUCK_TYPES) {
+                cumulative += t.chance;
+                if (rand < cumulative) {
+                    type = t;
+                    break;
+                }
+            }
+
             const world = document.getElementById('game-world');
             const container = document.createElement('div');
             container.className = 'duck-container';
-            
-            // Apply Customizations
-            container.innerHTML = `
-                <div class="duck-hat">${stats.duckHat}</div>
-                <div class="duck-body" style="filter: ${stats.duckColor}">🦆</div>
-            `;
-            
+            container.innerHTML = `<div class="duck-body ${type.sparkle ? 'rare-sparkle' : ''}" style="filter: ${type.color || 'none'}">${type.icon}</div>`;
             container.style.left = Math.random() * 80 + '%';
             container.style.top = Math.random() * 70 + '%';
 
             container.onclick = () => {
-                gainXP(stats.clickPower);
-                stats.bread += Math.floor(Math.random() * 3) + 1;
+                stats.bread += (type.id === 'legendary' ? 50 : 2);
+                if (!stats.discovered.includes(type.id)) {
+                    stats.discovered.push(type.id);
+                    updateBestiaryUI();
+                }
                 container.remove();
                 updateUI();
                 save();
             };
             world.appendChild(container);
-            setTimeout(() => container.remove(), 2500);
+            setTimeout(() => container.remove(), 2000);
         }
 
-        function gainXP(amount) {
-            stats.xp += amount;
-            if (stats.xp >= stats.xpToNext) {
-                stats.lvl++;
-                stats.xp = 0;
-                stats.xpToNext = Math.floor(stats.xpToNext * 1.6);
+        function updateBestiaryUI() {
+            const list = document.getElementById('bestiary-list');
+            list.innerHTML = '';
+            DUCK_TYPES.forEach(type => {
+                const isFound = stats.discovered.includes(type.id);
+                list.innerHTML += `
+                    <div class="bestiary-item ${isFound ? 'unlocked' : 'locked'}">
+                        <div style="font-size: 30px; filter: ${type.color || 'none'}">${isFound ? type.icon : '❓'}</div>
+                        <strong>${isFound ? type.name : 'Unknown'}</strong><br>
+                        ${isFound ? 'Found!' : 'Keep looking...'}
+                    </div>
+                `;
+            });
+        }
+
+        function toggleBestiary() {
+            const el = document.getElementById('bestiary-overlay');
+            el.style.display = el.style.display === 'block' ? 'none' : 'block';
+        }
+
+        function updateUI() {
+            document.getElementById('bread').innerText = stats.bread;
+            document.getElementById('lvl').innerText = stats.lvl;
+            document.getElementById('cost-click').innerText = 15 + (stats.clickPower * 5);
+            document.getElementById('cost-auto').innerText = 60 + (stats.autoLevel * 20);
+        }
+
+        function buyUpgrade(type) {
+            if (type === 'click' && stats.bread >= (15 + (stats.clickPower * 5))) {
+                stats.bread -= (15 + (stats.clickPower * 5));
+                stats.clickPower++;
+            } else if (type === 'auto' && stats.bread >= (60 + (stats.autoLevel * 20))) {
+                stats.bread -= (60 + (stats.autoLevel * 20));
+                stats.autoLevel++;
+                setInterval(createDuck, 3000);
             }
             updateUI();
+            save();
         }
 
         init();
-        setInterval(createDuck, 1200);
+        setInterval(createDuck, 1500);
     </script>
 </body>
 </html>
