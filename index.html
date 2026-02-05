@@ -3,12 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Duckémon: Titan Mobile</title>
+    <title>Duckémon: Pantheon Edition</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         :root { 
             --grass: #5fb35f; --water: #4a90e2; --accent: #f1c40f; 
             --panel: rgba(10, 10, 25, 0.98); --border: #ecf0f1;
+            --fire: #e74c3c; --void: #8e44ad; --cosmic: #3498db;
         }
         * { box-sizing: border-box; touch-action: manipulation; }
         body, html { 
@@ -33,25 +34,19 @@
         #player-container { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 100; }
 
         /* --- MOBILE CONTROLS --- */
-        #d-pad { 
-            position: absolute; bottom: 100px; left: 20px; z-index: 1500; 
-            display: grid; grid-template-columns: repeat(3, 50px); gap: 5px;
-        }
-        .d-btn { 
-            width: 50px; height: 50px; background: rgba(255,255,255,0.2); 
-            border: 2px solid #fff; display: flex; align-items: center; justify-content: center; font-size: 12px;
-        }
+        #d-pad { position: absolute; bottom: 110px; left: 20px; z-index: 1500; display: grid; grid-template-columns: repeat(3, 55px); gap: 5px; }
+        .d-btn { width: 55px; height: 55px; background: rgba(255,255,255,0.15); border: 2px solid #fff; display: flex; align-items: center; justify-content: center; font-size: 14px; border-radius: 5px; }
 
         /* --- UI MODALS --- */
         .screen { display: none; position: absolute; inset: 0; z-index: 2000; background: var(--panel); flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(10px); padding: 10px; }
         .modal { background: #111; border: 4px solid var(--border); padding: 15px; width: 95%; max-width: 600px; max-height: 90vh; overflow-y: auto; text-align: center; }
         
         .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 15px; }
-        .card { background: #222; border: 1px solid #444; padding: 8px; font-size: 7px; text-align: left; }
+        .card { background: #222; border: 1px solid #444; padding: 10px; font-size: 7px; text-align: left; }
         .bought { border-color: #2ecc71; background: #0a1a0a; }
 
         /* --- HUD --- */
-        #hud { position: absolute; bottom: 0; width: 100%; background: var(--panel); padding: 10px; display: flex; justify-content: space-around; align-items: center; font-size: 7px; border-top: 3px solid var(--accent); z-index: 1100; }
+        #hud { position: absolute; bottom: 0; width: 100%; background: var(--panel); padding: 12px; display: flex; justify-content: space-around; align-items: center; font-size: 8px; border-top: 4px solid var(--accent); z-index: 1100; }
         .btn { font-family: 'Press Start 2P'; padding: 8px; border: none; background: var(--border); color: #000; font-size: 7px; cursor: pointer; }
     </style>
 </head>
@@ -69,9 +64,10 @@
 
     <div id="battle-screen" class="screen">
         <div class="modal">
-            <h2 id="e-name" style="font-size: 12px; color:var(--accent);">WILD DUCK</h2>
-            <div id="e-sprite-battle" class="pixel-duck" onclick="clickDmg(event)" style="position:relative; transform:scale(8); margin: 50px auto;"></div>
-            <div style="width: 100%; height: 15px; background: #222; border: 2px solid #fff;"><div id="e-hp" style="height:100%; background:#e74c3c; width:100%;"></div></div>
+            <h2 id="e-name" style="font-size: 10px; color:var(--accent);">WILD DUCK</h2>
+            <p id="e-type-lbl" style="font-size: 7px; margin-bottom: 10px;"></p>
+            <div id="e-sprite-battle" class="pixel-duck" onclick="clickDmg(event)" style="position:relative; transform:scale(9); margin: 55px auto; cursor: pointer;"></div>
+            <div style="width: 100%; height: 15px; background: #222; border: 2px solid #fff;"><div id="e-hp" style="height:100%; background:var(--fire); width:100%;"></div></div>
             <div class="grid">
                 <button class="btn" style="background:#2ecc71" onclick="attemptCatch()">CATCH</button>
                 <button class="btn" onclick="run()">RUN</button>
@@ -81,30 +77,45 @@
 
     <div id="menu-screen" class="screen">
         <div class="modal">
-            <h2 style="color:var(--accent)">MENU</h2>
-            <p style="font-size:8px">BREAD: <span class="bread-val">0</span> | SP: <span id="sp-val">0</span></p>
-            <div class="grid" id="menu-content">
-                <div class="card" onclick="buy('egg', 200)">EGG (200🥖)<br>50 steps to hatch.</div>
-                <div class="card" onclick="buy('auto', 500)">AUTO (500🥖)<br>Dps +5.</div>
-                <div class="card" onclick="learn('crit')">CRIT (1 SP)<br>10% x2 Dmg.</div>
+            <h2 style="color:var(--accent)">COMMAND CENTER</h2>
+            <p style="font-size:8px">🥖 <span class="bread-val">0</span> | ✨ SP: <span id="sp-val">0</span></p>
+            <div class="grid">
+                <div class="card" onclick="buy('egg', 250)">MYSTERY EGG (250🥖)<br>50 steps to unlock stats.</div>
+                <div class="card" onclick="buy('auto', 600)">AUTO-QUACK (600🥖)<br>Constant damage!</div>
+                <div class="card" onclick="learn('crit')">CRIT HIT (1 SP)<br>10% chance: 2x Dmg.</div>
+                <div class="card" onclick="learn('titan')">TITAN FORM (2 SP)<br>+15 Base Attack.</div>
             </div>
-            <br><button class="btn" onclick="toggleScreen('menu-screen')">BACK</button>
+            <br><button class="btn" onclick="toggleScreen('menu-screen')">RESUME</button>
         </div>
     </div>
 
     <div id="hud">
         <div>🥖 <span class="bread-val">0</span></div>
-        <button class="btn" onclick="toggleScreen('menu-screen')">SHOP/SKILLS</button>
+        <button class="btn" onclick="toggleScreen('menu-screen')">MENU</button>
         <div>LVL: <span id="p-lvl">1</span></div>
     </div>
 </div>
 
 <script>
-    let p = JSON.parse(localStorage.getItem('duckTitan')) || { bread: 100, lvl: 1, sp: 0, steps: 0, atk: 5, skills: [], autos: 0, egg: 0 };
+    const TYPES = [
+        { id: 'FLAME', color: '#e74c3c', pref: ['Magma', 'Blaze', 'Sizzle'] },
+        { id: 'VOID', color: '#8e44ad', pref: ['Abyss', 'Shadow', 'Dark'] },
+        { id: 'COSMIC', color: '#3498db', pref: ['Nebula', 'Star', 'Astral'] },
+        { id: 'NEON', color: '#2ecc71', pref: ['Cyber', 'Volt', 'Laser'] },
+        { id: 'GOLD', color: '#f1c40f', pref: ['Holy', 'King', 'Rich'] }
+    ];
+    const SUFFIX = ['Waddler', 'Quacker', 'Diver', 'Beak', 'Titan'];
+
+    let p = JSON.parse(localStorage.getItem('duckPantheon')) || { bread: 150, lvl: 1, sp: 0, steps: 0, atk: 10, skills: [], autos: 0, egg: 0 };
     let pos = { x: 0, y: 0 }, rendered = {}, enemy = null;
 
     function init() {
-        render(); setInterval(() => { if(enemy && p.autos) { enemy.hp -= p.autos; checkWin(); } }, 1000);
+        render(); 
+        setInterval(() => { if(enemy && p.autos) { enemy.hp -= p.autos; checkWin(); } }, 1000);
+        setInterval(() => {
+            const hr = new Date().getHours();
+            document.getElementById('time-overlay').style.background = (hr >= 19 || hr <= 6) ? "rgba(0,0,40,0.4)" : "transparent";
+        }, 5000);
         window.addEventListener('keydown', e => {
             const k = e.key.toLowerCase();
             if(k==='w') move(0,64); if(k==='s') move(0,-64);
@@ -115,73 +126,13 @@
     function move(mx, my) {
         if(document.querySelector('.screen[style*="flex"]')) return;
         pos.x += mx; pos.y += my; p.steps++;
-        if(p.egg > 0) { p.egg--; if(p.egg===0){ p.lvl++; p.sp++; alert("HATCHED!"); } }
+        if(p.egg > 0) { p.egg--; if(p.egg===0){ p.lvl++; p.sp++; alert("EGG HATCHED!"); } }
         render();
         if(Math.random() < 0.08) startBattle();
         save();
     }
 
     function startBattle() {
-        enemy = { hp: 100 + (p.lvl*10), max: 100 + (p.lvl*10) };
-        document.getElementById('battle-screen').style.display = 'flex';
-        document.getElementById('e-sprite-battle').style.setProperty('--c', '#'+(Math.random()*0xFFFFFF<<0).toString(16));
-    }
-
-    function clickDmg() {
-        let d = p.atk; if(p.skills.includes('crit') && Math.random() < 0.1) d *= 2;
-        enemy.hp -= d; p.bread += 1; checkWin();
-    }
-
-    function checkWin() {
-        if(enemy && enemy.hp <= 0) { p.bread += 50; p.lvl++; p.sp++; run(); }
-        updateUI();
-    }
-
-    function buy(type, cost) {
-        if(p.bread >= cost) {
-            p.bread -= cost;
-            if(type === 'egg') p.egg = 50;
-            if(type === 'auto') p.autos += 5;
-            updateUI(); save();
-        }
-    }
-
-    function learn(id) {
-        if(p.sp >= 1 && !p.skills.includes(id)) { p.sp--; p.skills.push(id); updateUI(); save(); }
-    }
-
-    function render() {
-        const w = document.getElementById('world');
-        for(let i=-6; i<6; i++) {
-            for(let j=-6; j<6; j++) {
-                let tx = Math.floor(pos.x/64)+i, ty = Math.floor(pos.y/64)+j;
-                if(!rendered[`${tx},${ty}`]) {
-                    const t = document.createElement('div');
-                    t.className = `tile t-${Math.abs(tx+ty)%2}`;
-                    t.style.left = tx*64+'px'; t.style.top = -ty*64+'px';
-                    w.appendChild(t); rendered[`${tx},${ty}`] = true;
-                }
-            }
-        }
-        w.style.transform = `translate(${-pos.x+(window.innerWidth/2)}px, ${pos.y+(window.innerHeight/2)}px)`;
-        updateUI();
-    }
-
-    function updateUI() {
-        document.querySelectorAll('.bread-val').forEach(e => e.innerText = p.bread);
-        document.getElementById('p-lvl').innerText = p.lvl;
-        document.getElementById('sp-val').innerText = p.sp;
-        if(enemy) document.getElementById('e-hp').style.width = (enemy.hp/enemy.max*100)+'%';
-    }
-
-    function toggleScreen(id) {
-        const s = document.getElementById(id);
-        s.style.display = (s.style.display==='flex') ? 'none' : 'flex';
-    }
-
-    function attemptCatch() { if(Math.random() > 0.5) { alert("Caught!"); run(); } else { alert("Fled!"); run(); } }
-    function save() { localStorage.setItem('duckTitan', JSON.stringify(p)); }
-    function run() { enemy = null; document.getElementById('battle-screen').style.display = 'none'; updateUI(); }
-</script>
-</body>
-</html>
+        const type = TYPES[Math.floor(Math.random() * TYPES.length)];
+        const name = type.pref[Math.floor(Math.random()*type.pref.length)] + "-" + SUFFIX[Math.floor(Math.random()*SUFFIX.length)];
+        enemy = { hp: 100 + (p.lvl*15), max: 100 + (p.lvl*15), name: name, type: type.id, color: type.
