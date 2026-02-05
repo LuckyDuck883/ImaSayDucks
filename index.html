@@ -2,117 +2,116 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Duckémon: Elemental Tides</title>
+    <title>Duckémon: Homestead Architect</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         :root { 
             --grass: #5fb35f; --water: #4a90e2; --accent: #f1c40f; 
-            --panel: rgba(10, 10, 20, 0.98);
+            --panel: rgba(15, 15, 25, 0.95); --wood: #8b4513;
         }
         
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; font-family: 'Press Start 2P', cursive; color: #fff; overflow: hidden; image-rendering: pixelated; }
 
-        /* --- THE ATMOSPHERE --- */
-        #viewport { position: relative; width: 100vw; height: 100vh; overflow: hidden; transition: background 2s; }
-        #weather-layer { position: absolute; inset: 0; pointer-events: none; z-index: 1000; opacity: 0.3; }
+        /* --- THE WORLD --- */
+        #viewport { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
         #world { position: absolute; transition: transform 0.1s; }
-        
-        /* Day/Night Overlay */
-        #time-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 900; transition: background 5s; }
-
-        .tile { width: 64px; height: 64px; position: absolute; }
+        .tile { width: 64px; height: 64px; position: absolute; border: 1px solid rgba(255,255,255,0.01); }
         .t-0 { background: var(--grass); } 
         .t-1 { background: var(--water); }
 
-        /* --- SPRITES --- */
-        .pixel-duck {
-            width: 4px; height: 4px; background: transparent;
-            box-shadow: 8px 4px 0 var(--c), 12px 4px 0 var(--c), 16px 4px 0 var(--c), 8px 8px 0 var(--c), 12px 8px 0 var(--c), 16px 8px 0 var(--c), 20px 8px 0 #e67e22, 4px 12px 0 var(--c), 8px 12px 0 var(--c), 12px 12px 0 var(--c), 16px 12px 0 var(--c), 16px 4px 0 #000, 12px 8px 0 #ff6b6b;
-            position: absolute; transform: scale(3.5);
+        /* --- BUILDINGS --- */
+        .structure { 
+            position: absolute; width: 64px; height: 64px; 
+            background: var(--wood); border: 4px solid #5d2e0a; 
+            z-index: 10; display: flex; align-items: center; justify-content: center;
+            font-size: 8px; color: #fff;
         }
 
-        #player-container { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 100; }
+        /* --- UI --- */
+        .screen { display: none; position: absolute; inset: 0; z-index: 2000; background: var(--panel); flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
+        .modal { background: #1a1a2e; border: 4px solid #fff; padding: 25px; width: 500px; text-align: center; }
+        
+        #hud { position: absolute; bottom: 0; width: 100%; background: var(--panel); padding: 15px; display: flex; justify-content: space-around; font-size: 8px; border-top: 4px solid var(--accent); z-index: 1000; }
+        .btn { font-family: 'Press Start 2P'; padding: 10px; border: none; background: #fff; color: #000; cursor: pointer; font-size: 8px; margin: 2px; }
 
-        /* --- UI ELEMENTS --- */
-        #hud { position: absolute; bottom: 0; width: 100%; background: var(--panel); padding: 15px; display: flex; justify-content: space-around; font-size: 8px; border-top: 4px solid var(--accent); z-index: 1100; }
-        .status-tag { background: #333; padding: 5px; border: 1px solid var(--accent); }
+        /* --- PLAYER --- */
+        #player-container { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 100; }
+        .pixel-duck { width: 4px; height: 4px; background: transparent; box-shadow: 8px 4px 0 var(--c), 12px 4px 0 var(--c), 16px 4px 0 var(--c), 8px 8px 0 var(--c), 12px 8px 0 var(--c), 16px 8px 0 var(--c), 20px 8px 0 #e67e22, 4px 12px 0 var(--c), 8px 12px 0 var(--c), 12px 12px 0 var(--c), 16px 12px 0 var(--c), 16px 4px 0 #000, 12px 8px 0 #ff6b6b; position: absolute; transform: scale(3.5); }
     </style>
 </head>
 <body onload="init()">
 
 <div id="viewport">
-    <div id="time-overlay"></div>
-    <div id="weather-layer"></div>
     <div id="world"></div>
-    
-    <div id="player-container">
-        <div id="p-sprite" class="pixel-duck" style="--c:var(--accent)"></div>
+    <div id="player-container"><div class="pixel-duck" style="--c:var(--accent)"></div></div>
+
+    <div id="build-screen" class="screen">
+        <div class="modal">
+            <h2 style="color:var(--accent)">CONSTRUCTION</h2>
+            <p>RESOURCES: <span id="wood-count">0</span> WOOD</p>
+            <div style="display:grid; gap:10px;">
+                <button class="btn" onclick="build('cabin')">WOOD CABIN (10 WOOD)</button>
+                <button class="btn" onclick="build('nest')">WARM NEST (5 WOOD)</button>
+            </div>
+            <br>
+            <button class="btn" onclick="toggleScreen('build-screen')">CLOSE</button>
+        </div>
     </div>
 
     <div id="hud">
-        <div class="status-tag">TIME: <span id="clock">12:00</span></div>
-        <div class="status-tag">WEATHER: <span id="weather-txt">CLEAR</span></div>
-        <div class="status-tag">BREAD: <span id="bread">0</span></div>
-        <div class="status-tag">COORD: <span id="coords">0,0</span></div>
+        <div>🪵 <span class="res-wood">0</span> | 🥖 <span id="bread">0</span></div>
+        <button class="btn" onclick="toggleScreen('build-screen')">BUILD</button>
+        <div>POS: <span id="coords">0,0</span></div>
     </div>
 </div>
 
 <script>
     let pos = { x: 0, y: 0 };
-    let player = { bread: 0, steps: 0 };
-    let gameTime = 720; // Starts at Noon (720 minutes)
-    let currentWeather = 'CLEAR';
+    let resources = { wood: 20, bread: 100 };
+    let buildings = []; // Array to store {x, y, type}
     let rendered = {};
 
     function init() {
         renderMap();
-        setInterval(updateWorldState, 2000); // Progress time and weather
         window.addEventListener('keydown', (e) => {
+            if(document.querySelector('.screen[style*="flex"]')) return;
             const k = e.key.toLowerCase();
-            const s = 64;
-            if(k === 'w') pos.y += s;
-            if(k === 's') pos.y -= s;
-            if(k === 'a') pos.x -= s;
-            if(k === 'd') pos.x += s;
-            player.steps++;
+            if(k === 'w') pos.y += 64;
+            if(k === 's') pos.y -= 64;
+            if(k === 'a') pos.x -= 64;
+            if(k === 'd') pos.x += 64;
+            
+            // Randomly find wood while walking
+            if(Math.random() < 0.1) {
+                resources.wood++;
+                updateUI();
+            }
             renderMap();
         });
     }
 
-    function updateWorldState() {
-        // 1. Advance Time
-        gameTime = (gameTime + 10) % 1440;
-        let hours = Math.floor(gameTime / 60);
-        let mins = gameTime % 60;
-        document.getElementById('clock').innerText = `${hours.toString().padStart(2,'0')}:${mins.toString().padStart(2,'0')}`;
-
-        // 2. Day/Night Visuals
-        const overlay = document.getElementById('time-overlay');
-        if (hours >= 20 || hours <= 5) overlay.style.background = "rgba(0, 0, 50, 0.5)"; // Night
-        else if (hours >= 17) overlay.style.background = "rgba(255, 100, 0, 0.2)"; // Sunset
-        else overlay.style.background = "transparent"; // Day
-
-        // 3. Random Weather
-        if (Math.random() < 0.1) {
-            const weathers = ['CLEAR', 'RAIN', 'FOG', 'SANDSTORM'];
-            currentWeather = weathers[Math.floor(Math.random() * weathers.length)];
-            document.getElementById('weather-txt').innerText = currentWeather;
-            applyWeatherEffect();
+    function build(type) {
+        let cost = type === 'cabin' ? 10 : 5;
+        if(resources.wood >= cost) {
+            resources.wood -= cost;
+            const b = document.createElement('div');
+            b.className = 'structure';
+            b.innerText = type.toUpperCase();
+            b.style.left = pos.x + 'px';
+            b.style.top = -pos.y + 'px';
+            document.getElementById('world').appendChild(b);
+            buildings.push({x: pos.x, y: pos.y, type: type});
+            toggleScreen('build-screen');
+            updateUI();
+        } else {
+            alert("Need more wood! Keep walking to find some.");
         }
-    }
-
-    function applyWeatherEffect() {
-        const layer = document.getElementById('weather-layer');
-        if (currentWeather === 'RAIN') layer.style.background = "linear-gradient(to bottom, transparent, #4a90e2)";
-        else if (currentWeather === 'SANDSTORM') layer.style.background = "#d2b48c";
-        else if (currentWeather === 'FOG') layer.style.background = "#fff";
-        else layer.style.background = "transparent";
     }
 
     function renderMap() {
         const world = document.getElementById('world');
-        for (let i = -8; i < 8; i++) {
-            for (let j = -8; j < 8; j++) {
+        for (let i = -10; i < 10; i++) {
+            for (let j = -10; j < 10; j++) {
                 let tx = Math.floor(pos.x / 64) + i;
                 let ty = Math.floor(pos.y / 64) + j;
                 let key = `${tx},${ty}`;
@@ -128,6 +127,17 @@
         }
         world.style.transform = `translate(${-pos.x + (window.innerWidth/2)}px, ${pos.y + (window.innerHeight/2)}px)`;
         document.getElementById('coords').innerText = `${Math.floor(pos.x/64)},${Math.floor(pos.y/64)}`;
+    }
+
+    function updateUI() {
+        document.querySelectorAll('.res-wood').forEach(el => el.innerText = resources.wood);
+        document.getElementById('wood-count').innerText = resources.wood;
+        document.getElementById('bread').innerText = resources.bread;
+    }
+
+    function toggleScreen(id) {
+        const s = document.getElementById(id);
+        s.style.display = (s.style.display === 'flex') ? 'none' : 'flex';
     }
 </script>
 </body>
