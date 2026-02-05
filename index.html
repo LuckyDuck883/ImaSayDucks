@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Duckémon: Infinite Frontier</title>
+    <title>Duckémon: World of Wonder</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         :root { 
-            --grass: #4caf50; --water: #2196f3; --sand: #f4d03f;
+            --grass: #4caf50; --water: #2196f3; --sand: #f4d03f; --snow: #ffffff;
             --p-yellow: #f1c40f;
         }
         
@@ -17,16 +17,25 @@
             color: #fff; overflow: hidden; image-rendering: pixelated;
         }
 
-        /* --- INFINITE WORLD --- */
-        #viewport { position: relative; width: 100vw; height: 100vh; overflow: hidden; background: #111; }
+        /* --- WORLD ENGINE --- */
+        #viewport { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
         #world { position: absolute; transition: transform 0.1s ease-out; }
         
-        .tile { width: 80px; height: 80px; position: absolute; border: 1px solid rgba(0,0,0,0.1); }
-        .t-0 { background: var(--grass); }
-        .t-1 { background: var(--water); }
-        .t-2 { background: var(--sand); }
+        .tile { width: 80px; height: 80px; position: absolute; border: 1px solid rgba(0,0,0,0.05); }
+        .t-0 { background: var(--grass); } /* Forest */
+        .t-1 { background: var(--water); } /* Ocean */
+        .t-2 { background: var(--sand); }  /* Desert */
+        .t-3 { background: #555; }         /* Cyber Ruins */
 
-        /* --- PIXEL ART DUCK --- */
+        /* --- WEATHER EFFECTS --- */
+        #weather-overlay { 
+            position: absolute; inset: 0; pointer-events: none; z-index: 200; 
+            background: transparent; transition: 2s;
+        }
+        .rain { background: rgba(0, 0, 50, 0.2) !important; box-shadow: inset 0 0 100px rgba(0,0,255,0.1); }
+        .sandstorm { background: rgba(100, 50, 0, 0.2) !important; }
+
+        /* --- PIXEL DUCK ART --- */
         .pixel-duck {
             width: 8px; height: 8px; background: transparent;
             box-shadow: 
@@ -40,84 +49,97 @@
 
         #player-container { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 100; }
 
-        /* --- BATTLE SYSTEM --- */
+        /* --- BATTLE & MENUS --- */
         .screen { display: none; position: absolute; inset: 0; z-index: 1000; background: #fff; color: #000; flex-direction: column; align-items: center; justify-content: center; }
-        
-        #battle-stage { width: 100%; height: 300px; position: relative; display: flex; justify-content: space-around; align-items: center; }
-        .shake { animation: shake 0.3s; }
-        @keyframes shake { 0% { transform: translate(5px); } 50% { transform: translate(-5px); } 100% { transform: translate(0); } }
+        .btn { font-family: 'Press Start 2P'; padding: 15px; border: 4px solid #000; cursor: pointer; font-size: 10px; background: #fff; }
+        .btn:hover { background: #eee; }
 
-        .battle-ui { width: 100%; background: #eee; padding: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 15px; border-top: 5px solid #000; }
-        .btn { font-family: 'Press Start 2P'; padding: 15px; border: 4px solid #000; cursor: pointer; font-size: 10px; }
-        .btn:hover { background: #ddd; }
-
-        /* --- HUD --- */
-        #hud { position: absolute; bottom: 0; width: 100%; background: rgba(0,0,0,0.8); padding: 20px; display: flex; justify-content: space-between; z-index: 500; }
-        .hp-bar { width: 300px; height: 20px; border: 4px solid #000; background: #333; }
+        #hud { position: absolute; bottom: 0; width: 100%; background: rgba(0,0,0,0.9); padding: 20px; display: flex; justify-content: space-between; z-index: 500; border-top: 4px solid #fff; }
+        .hp-bar { width: 250px; height: 15px; border: 3px solid #000; background: #333; margin-top: 10px; }
         .hp-fill { height: 100%; background: #2ecc71; width: 100%; transition: 0.5s; }
     </style>
 </head>
 <body onload="init()">
 
 <div id="viewport">
+    <div id="weather-overlay"></div>
     <div id="world"></div>
-    <div id="player-container"><div id="p-sprite-main" class="pixel-duck" style="--c:var(--p-yellow)"></div></div>
+    <div id="player-container"><div id="p-sprite" class="pixel-duck" style="--c:var(--p-yellow)"></div></div>
 
     <div id="battle-screen" class="screen">
-        <div id="battle-msg" style="margin-bottom: 20px; font-size: 12px;">WILD DUCK ENCOUNTERED!</div>
-        <div id="battle-stage">
-            <div>
-                <div id="p-battle-duck" class="pixel-duck" style="--c:var(--p-yellow); position: relative;"></div>
+        <h2 id="b-type">WILD BATTLE</h2>
+        <div id="b-stage" style="display:flex; justify-content:space-around; width:100%; margin: 50px 0;">
+            <div id="p-box">
+                <div class="pixel-duck" style="--c:var(--p-yellow); position:relative; transform:scale(6)"></div>
                 <div class="hp-bar"><div id="p-hp" class="hp-fill"></div></div>
             </div>
-            <div>
-                <div id="e-battle-duck" class="pixel-duck" style="position: relative; transform: scale(6) scaleX(-1);"></div>
+            <div id="e-box">
+                <div id="e-sprite" class="pixel-duck" style="position:relative; transform:scale(7) scaleX(-1)"></div>
                 <div class="hp-bar"><div id="e-hp" class="hp-fill"></div></div>
             </div>
         </div>
-        <div class="battle-ui">
-            <button class="btn" onclick="executeMove('PHYSICAL')">TACKLE</button>
-            <button class="btn" onclick="executeMove('SPECIAL')" style="background: #4cc9f0;">HYDRO BEAK</button>
-            <button class="btn" onclick="executeMove('FIRE')" style="background: #ff7675;">EMBER</button>
-            <button class="btn" onclick="useItem()">HEAL (BREAD)</button>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; width:80%;">
+            <button class="btn" onclick="move('TACKLE')">TACKLE</button>
+            <button class="btn" onclick="move('SPECIAL')" id="move-spec" style="background:#4cc9f0">ELEMENT</button>
+            <button class="btn" onclick="capture()">CATCH</button>
+            <button class="btn" onclick="run()">RUN</button>
         </div>
     </div>
 
     <div id="hud">
-        <div>COORDS: <span id="coords">0, 0</span> | LVL: <span id="lvl">1</span></div>
-        <div>WASD TO EXPLORE INFINITELY</div>
+        <div>ZONE: <span id="zone-name">FOREST</span> | LVL: <span id="lvl">1</span></div>
+        <div>BREAD: <span id="bread">0</span> | CAUGHT: <span id="caught">0</span>/8</div>
     </div>
 </div>
 
 <script>
     let pos = { x: 0, y: 0 };
-    let player = { lvl: 1, hp: 100, bread: 10 };
+    let player = { lvl: 1, hp: 100, bread: 0, caught: [] };
     let enemy = null;
     let renderedTiles = {};
     const step = 80;
 
+    const DUCK_TYPES = {
+        FOREST: { name: "Nature Duck", color: "#2ecc71", move: "Leaf Whip" },
+        OCEAN:  { name: "Aqua Duck", color: "#3498db", move: "Hydro Pump" },
+        DESERT: { name: "Sand Duck", color: "#e67e22", move: "Dust Cloud" },
+        CYBER:  { name: "Giga Duck", color: "#00ecff", move: "Laser Beam" },
+        GHOST:  { name: "Spook Duck", color: "#9b59b6", move: "Night Shade" },
+        GOLD:   { name: "Shiny Duck", color: "#f1c40f", move: "Midas Peck" }
+    };
+
     function init() {
-        renderMap();
-        window.addEventListener('keydown', handleMove);
+        generateWorld();
+        window.addEventListener('keydown', (e) => {
+            if(document.getElementById('battle-screen').style.display === 'flex') return;
+            const k = e.key.toLowerCase();
+            if(k === 'w') pos.y += step;
+            if(k === 's') pos.y -= step;
+            if(k === 'a') pos.x -= step;
+            if(k === 'd') pos.x += step;
+            generateWorld();
+            checkEncounters();
+        });
     }
 
-    // --- INFINITE WORLD GENERATION ---
-    function renderMap() {
+    function generateWorld() {
         const world = document.getElementById('world');
-        const viewDist = 8;
+        const view = 10;
+        const currentZone = getZone(pos.x, pos.y);
         
-        for (let i = -viewDist; i < viewDist; i++) {
-            for (let j = -viewDist; j < viewDist; j++) {
+        document.getElementById('zone-name').innerText = currentZone.name;
+        applyWeather(currentZone.name);
+
+        for (let i = -view; i < view; i++) {
+            for (let j = -view; j < view; j++) {
                 let tx = Math.floor(pos.x / step) + i;
                 let ty = Math.floor(pos.y / step) + j;
                 let key = `${tx},${ty}`;
 
                 if (!renderedTiles[key]) {
                     const t = document.createElement('div');
-                    // Pseudo-random biome generation
-                    let seed = Math.abs(Math.sin(tx * 12.9898 + ty * 78.233) * 43758.5453);
-                    let type = Math.floor(seed % 3);
-                    t.className = `tile t-${type}`;
+                    let z = getZone(tx * step, ty * step);
+                    t.className = `tile t-${z.id}`;
                     t.style.left = `${tx * step}px`;
                     t.style.top = `${-ty * step}px`;
                     world.appendChild(t);
@@ -128,87 +150,68 @@
         world.style.transform = `translate(${-pos.x + (window.innerWidth/2)}px, ${pos.y + (window.innerHeight/2)}px)`;
     }
 
-    function handleMove(e) {
-        if(document.getElementById('battle-screen').style.display === 'flex') return;
-        const k = e.key.toLowerCase();
-        if(k === 'w') pos.y += step;
-        if(k === 's') pos.y -= step;
-        if(k === 'a') pos.x -= step;
-        if(k === 'd') pos.x += step;
+    function getZone(x, y) {
+        if (Math.abs(x) > 2000 || Math.abs(y) > 2000) return { id: 3, name: "CYBER RUINS" };
+        if (x > 800) return { id: 2, name: "DESERT" };
+        if (y < -800) return { id: 1, name: "OCEAN" };
+        return { id: 0, name: "FOREST" };
+    }
 
-        if(['w','a','s','d'].includes(k)) {
-            renderMap();
-            document.getElementById('coords').innerText = `${Math.floor(pos.x/step)}, ${Math.floor(pos.y/step)}`;
-            if(Math.random() < 0.1) startBattle();
+    function applyWeather(zone) {
+        const w = document.getElementById('weather-overlay');
+        w.className = (zone === "OCEAN") ? "rain" : (zone === "DESERT") ? "sandstorm" : "";
+    }
+
+    function checkEncounters() {
+        if(Math.random() < 0.08) {
+            const zone = getZone(pos.x, pos.y).name.split(' ')[0];
+            const pool = (Math.random() > 0.9) ? DUCK_TYPES.GOLD : (Math.random() > 0.7) ? DUCK_TYPES.GHOST : DUCK_TYPES[zone];
+            startBattle(pool);
         }
     }
 
-    // --- BATTLE LOGIC ---
-    function startBattle() {
-        const scr = document.getElementById('battle-screen');
-        scr.style.display = 'flex';
-        enemy = { hp: 100, color: '#'+(Math.random()*0xFFFFFF<<0).toString(16) };
-        document.getElementById('e-battle-duck').style.setProperty('--c', enemy.color);
+    function startBattle(type) {
+        document.getElementById('battle-screen').style.display = 'flex';
+        enemy = { ...type, hp: 100 };
+        document.getElementById('e-sprite').style.setProperty('--c', enemy.color);
+        document.getElementById('move-spec').innerText = enemy.move;
         updateBars();
     }
 
-    function executeMove(type) {
-        const pDuck = document.getElementById('p-battle-duck');
-        const eDuck = document.getElementById('e-battle-duck');
-        
-        // Attack Animation
-        pDuck.style.transform = "scale(5) translateX(20px)";
-        
-        setTimeout(() => {
-            pDuck.style.transform = "scale(5) translateX(0)";
-            eDuck.classList.add('shake');
-            
-            let dmg = 20 + (player.lvl * 2);
-            if(type === 'FIRE') dmg += 10; // High risk attack
-            
-            enemy.hp -= dmg;
-            document.getElementById('battle-msg').innerText = `USED ${type} ATTACK!`;
-
-            if(enemy.hp <= 0) {
-                setTimeout(() => { alert("VICTORY!"); player.lvl++; player.bread += 50; endBattle(); }, 500);
-            } else {
-                // Enemy turn
-                setTimeout(enemyTurn, 600);
-            }
-            updateBars();
-        }, 200);
-        
-        setTimeout(() => eDuck.classList.remove('shake'), 500);
-    }
-
-    function enemyTurn() {
-        player.hp -= 15;
-        document.getElementById('battle-msg').innerText = "WILD DUCK CONFRONTS YOU!";
-        document.getElementById('p-battle-duck').classList.add('shake');
-        setTimeout(() => document.getElementById('p-battle-duck').classList.remove('shake'), 300);
-        updateBars();
-        if(player.hp <= 0) { alert("YOU FAINTED"); location.reload(); }
-    }
-
-    function useItem() {
-        if(player.bread >= 1) {
-            player.hp = Math.min(100, player.hp + 40);
-            player.bread -= 10;
-            document.getElementById('battle-msg').innerText = "HEALED WITH BREAD!";
-            updateBars();
+    function move(m) {
+        enemy.hp -= (m === 'TACKLE' ? 25 : 40) + player.lvl;
+        if(enemy.hp <= 0) {
+            player.bread += 50; player.lvl++; endBattle("Enemy Fainted!");
+        } else {
+            player.hp -= 15;
+            if(player.hp <= 0) location.reload();
         }
+        updateBars();
+    }
+
+    function capture() {
+        if(Math.random() > (enemy.hp/100)) {
+            if(!player.caught.includes(enemy.name)) player.caught.push(enemy.name);
+            endBattle("CAUGHT " + enemy.name + "!");
+        } else {
+            alert("It broke free!");
+        }
+    }
+
+    function endBattle(msg) {
+        alert(msg);
+        document.getElementById('battle-screen').style.display = 'none';
+        document.getElementById('caught').innerText = player.caught.length;
+        document.getElementById('bread').innerText = player.bread;
+        document.getElementById('lvl').innerText = player.lvl;
     }
 
     function updateBars() {
         document.getElementById('e-hp').style.width = enemy.hp + '%';
         document.getElementById('p-hp').style.width = player.hp + '%';
-        document.getElementById('lvl').innerText = player.lvl;
     }
-
-    function endBattle() {
-        document.getElementById('battle-screen').style.display = 'none';
-        document.getElementById('battle-msg').innerText = "WILD DUCK ENCOUNTERED!";
-    }
+    
+    function run() { document.getElementById('battle-screen').style.display = 'none'; }
 </script>
 </body>
 </html>
