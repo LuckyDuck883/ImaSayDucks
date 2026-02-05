@@ -3,179 +3,200 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Duckémon: Center & City</title>
+    <title>Duckémon: Legend of the Grand Quack</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         :root { 
-            --grass: #55aa55; --water: #4488ff; --wall: #ecf0f1; --roof: #e74c3c;
-            --hydro: #4cc9f0; --npc: #576574;
+            --grass: #55aa55; --water: #4cc9f0; --roof: #e74c3c; --gym: #9b59b6;
+            --hydro: #4cc9f0; --text: #2c3e50;
         }
-        body { margin: 0; background: #111; font-family: 'Press Start 2P', cursive; display: flex; flex-direction: column; align-items: center; color: #fff; overflow: hidden; }
-
-        /* --- WORLD VIEW --- */
-        #game-container { position: relative; width: 400px; height: 400px; border: 10px solid #333; overflow: hidden; margin-top: 20px; image-rendering: pixelated; background: #000; }
-        #map { position: absolute; width: 1200px; height: 1200px; display: grid; grid-template-columns: repeat(30, 40px); transition: 0.1s linear; }
         
-        .tile { width: 40px; height: 40px; }
+        * { box-sizing: border-box; }
+        body, html { 
+            margin: 0; padding: 0; width: 100%; height: 100%; 
+            background: #000; font-family: 'Press Start 2P', cursive; 
+            color: #fff; overflow: hidden; 
+        }
+
+        /* --- FULLSCREEN WORLD --- */
+        #game-viewport {
+            position: relative; width: 100vw; height: 100vh;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+
+        #world-box {
+            position: relative; width: 100%; height: 100%;
+            overflow: hidden; background: #222; image-rendering: pixelated;
+        }
+
+        #map {
+            position: absolute; width: 3000px; height: 3000px;
+            display: grid; grid-template-columns: repeat(50, 60px);
+            transition: 0.1s linear;
+        }
+
+        .tile { width: 60px; height: 60px; border: 1px solid rgba(0,0,0,0.05); }
         .t-grass { background: var(--grass); }
         .t-water { background: var(--water); }
 
-        /* --- BUILDINGS --- */
-        #duck-center { 
-            position: absolute; width: 120px; height: 100px; 
-            background: var(--wall); border: 4px solid #000; z-index: 4;
-        }
-        .roof { position: absolute; top: -30px; left: -4px; width: 120px; height: 30px; background: var(--roof); border: 4px solid #000; }
-        .door { position: absolute; bottom: 0; left: 45px; width: 30px; height: 30px; background: #34495e; border-top: 4px solid #000; }
+        /* --- OBJECTS --- */
+        .building { position: absolute; border: 6px solid #000; z-index: 5; }
+        .b-center { width: 180px; height: 140px; background: #ecf0f1; }
+        .b-gym { width: 240px; height: 180px; background: #95a5a6; border-color: var(--gym); }
+        .label { width: 100%; text-align: center; color: #000; margin-top: 10px; font-size: 10px; }
 
-        /* --- INTERIOR --- */
-        #interior { 
-            display: none; position: absolute; inset: 0; background: #bdc3c7; z-index: 400; 
-            flex-direction: column; align-items: center; justify-content: center; color: #000;
+        /* --- PLAYER --- */
+        #player {
+            position: absolute; left: 50%; top: 50%;
+            transform: translate(-50%, -50%); z-index: 100;
         }
-
-        /* --- SPRITES --- */
-        .sprite { width: 32px; height: 32px; position: absolute; z-index: 5; }
-        #player { left: 184px; top: 184px; z-index: 10; }
         .duck { 
-            width: 32px; height: 28px; background: var(--c, #ff0); border-radius: 12px 12px 5px 5px; position: relative;
-            border: 2px solid #000;
+            width: 48px; height: 42px; background: var(--c, #ff0); 
+            border-radius: 15px 15px 5px 5px; border: 3px solid #000; position: relative;
         }
-        .duck::before { content: ''; position: absolute; width: 8px; height: 5px; background: #f80; right: -6px; top: 10px; border-radius: 0 5px 5px 0; border: 1px solid #000; }
+        .duck::before { content: ''; position: absolute; width: 12px; height: 8px; background: #f80; right: -9px; top: 15px; border-radius: 0 5px 5px 0; border: 2px solid #000; }
 
-        #battle-screen { display: none; position: absolute; inset: 0; background: #fff; z-index: 500; color: #000; flex-direction: column; align-items: center; justify-content: space-around; padding: 20px; }
-        .hp-bar { width: 100%; height: 12px; background: #ccc; border: 2px solid #000; }
-        .hp-fill { height: 100%; background: #2ecc71; width: 100%; transition: 0.3s; }
+        /* --- INTERFACES --- */
+        .overlay {
+            display: none; position: absolute; inset: 0; z-index: 1000;
+            background: #fff; color: #000; flex-direction: column; align-items: center; justify-content: center;
+        }
 
-        #hud { width: 420px; background: #222; padding: 15px; box-sizing: border-box; font-size: 8px; }
-        .btn { font-family: inherit; font-size: 8px; padding: 10px; cursor: pointer; }
+        #battle-screen { background: #f9f9f9; padding: 40px; }
+        
+        .hp-outer { width: 300px; height: 20px; background: #ddd; border: 4px solid #000; margin: 10px 0; }
+        .hp-inner { height: 100%; background: #2ecc71; width: 100%; transition: 0.3s; }
+
+        /* --- HUD --- */
+        #hud {
+            position: absolute; bottom: 0; width: 100%; background: rgba(0,0,0,0.8);
+            padding: 20px; display: flex; justify-content: space-between; font-size: 12px; z-index: 500;
+        }
+
+        .btn { 
+            font-family: 'Press Start 2P'; padding: 15px; cursor: pointer;
+            background: #eee; border: 4px solid #000; border-bottom: 8px solid #999;
+        }
+        .btn:active { border-bottom-width: 4px; transform: translateY(4px); }
     </style>
 </head>
 <body onload="init()">
 
-<div id="game-container">
-    <div id="map"></div>
-    
-    <div id="duck-center" style="left: 500px; top: 500px;">
-        <div class="roof"></div>
-        <div class="door"></div>
-        <div style="color:#000; font-size:10px; text-align:center; margin-top:10px;">CENTER</div>
+<div id="game-viewport">
+    <div id="world-box">
+        <div id="map"></div>
+        
+        <div class="building b-center" id="center-obj" style="left: 600px; top: 600px;">
+            <div class="label">DUCK CENTER</div>
+            <div style="position:absolute; bottom:0; left:70px; width:40px; height:40px; background:#333;"></div>
+        </div>
+
+        <div class="building b-gym" id="gym-obj" style="left: 1800px; top: 400px;">
+            <div class="label" style="color:var(--gym)">GRAND GYM</div>
+            <div style="position:absolute; bottom:0; left:100px; width:40px; height:40px; background:#000;"></div>
+        </div>
+
+        <div id="player">
+            <div id="p-sprite" class="duck" style="--c:#ff0"></div>
+        </div>
     </div>
 
-    <div id="player" class="sprite"><div id="p-sprite" class="duck" style="--c:#ff0"></div></div>
-    
-    <div id="interior">
-        <div class="duck" style="--c:#ff7675; transform:scale(2)"></div>
-        <p>Welcome to the Duck Center!</p>
-        <p>Resting your team...</p>
-        <button class="btn" onclick="leaveCenter()">EXIT</button>
+    <div id="battle-screen" class="overlay">
+        <h1 id="battle-title">WILD ENCOUNTER</h1>
+        <div id="e-sprite" style="transform: scale(4) scaleX(-1); margin: 50px;"></div>
+        <div class="hp-outer"><div id="e-hp" class="hp-inner"></div></div>
+        <div class="hp-outer"><div id="p-hp" class="hp-inner"></div></div>
+        <button class="btn" onclick="attack()" style="background:#ff7675; color:white;">QUACK BLAST</button>
     </div>
 
-    <div id="battle-screen">
-        <div id="e-sprite" style="transform: scale(3) scaleX(-1);"></div>
-        <div class="hp-bar"><div id="e-hp" class="hp-fill"></div></div>
-        <div class="hp-bar"><div id="p-hp" class="hp-fill"></div></div>
-        <button class="btn" onclick="attack()">QUACK ATTACK!</button>
+    <div id="interior" class="overlay">
+        <div class="duck" style="--c:#4cc9f0; transform:scale(3)"></div>
+        <h2>Restoring your team...</h2>
+        <button class="btn" onclick="exitBuilding()">BACK TO WORLD</button>
     </div>
-</div>
 
-<div id="hud">
-    <span>LVL: <span id="lvl">1</span> | 🥖: <span id="bread">0</span> | HP: <span id="hp-stat">100</span>%</span>
+    <div id="hud">
+        <div>LVL: <span id="lvl">1</span> | BREAD: <span id="bread">0</span></div>
+        <div style="color: #4cc9f0;">WASD TO EXPLORE | F FOR FULLSCREEN</div>
+    </div>
 </div>
 
 <script>
-    let world = { x: -400, y: -400 };
-    let player = { lvl: 1, hp: 100, bread: 0, color: '#4cc9f0' };
+    // Configuration
+    let world = { x: -300, y: -300 };
+    let player = { lvl: 1, hp: 100, bread: 0, color: '#f1c40f' };
     let enemy = null;
+    let isGym = false;
 
     function init() {
-        const mapDiv = document.getElementById('map');
-        for(let i=0; i < 900; i++) {
-            const tile = document.createElement('div');
-            tile.className = 'tile ' + (Math.random() > 0.9 ? 't-water' : 't-grass');
-            mapDiv.appendChild(tile);
+        const map = document.getElementById('map');
+        for(let i=0; i<2500; i++) {
+            const t = document.createElement('div');
+            t.className = 'tile ' + (Math.random() > 0.92 ? 't-water' : 't-grass');
+            map.appendChild(t);
         }
-        window.addEventListener('keydown', handleKey);
-        updateUI();
+        window.addEventListener('keydown', handleInput);
+        update();
     }
 
-    function handleKey(e) {
-        if(document.getElementById('battle-screen').style.display === 'flex' || 
-           document.getElementById('interior').style.display === 'flex') return;
+    function handleInput(e) {
+        if(document.querySelector('.overlay[style*="display: flex"]')) return;
 
-        const key = e.key.toLowerCase();
-        if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(key)) {
-            if(key === 'w' || key === 'arrowup') world.y += 40;
-            if(key === 's' || key === 'arrowdown') world.y -= 40;
-            if(key === 'a' || key === 'arrowleft') world.x += 40;
-            if(key === 'd' || key === 'arrowright') world.x -= 40;
-            
-            checkCollisions();
-            updateUI();
-        }
+        const k = e.key.toLowerCase();
+        const step = 60;
+        if(k === 'w' || k === 'arrowup') world.y += step;
+        if(k === 's' || k === 'arrowdown') world.y -= step;
+        if(k === 'a' || k === 'arrowleft') world.x += step;
+        if(k === 'd' || k === 'arrowright') world.x -= step;
+        
+        if(k === 'f') toggleFull();
+
+        checkCollisions();
+        update();
     }
 
     function checkCollisions() {
-        // Player absolute position
-        let px = 184 - world.x;
-        let py = 184 - world.y;
+        // Center-screen relative player coords
+        let px = (window.innerWidth/2) - world.x;
+        let py = (window.innerHeight/2) - world.y;
 
-        // Check Duck Center Entrance (at 500, 500)
-        // Door is at 500+45, 500+70
-        if(px >= 540 && px <= 580 && py >= 570 && py <= 600) {
-            enterCenter();
-        }
+        // Duck Center (600, 600)
+        if(px > 650 && px < 730 && py > 700 && py < 740) enterBuilding('interior');
+        
+        // Gym (1800, 400)
+        if(px > 1880 && px < 1960 && py > 540 && py < 580) startBattle(true);
 
-        // Random Battle in Grass
-        if(Math.random() < 0.05) startBattle();
+        if(Math.random() < 0.05) startBattle(false);
     }
 
-    function enterCenter() {
-        document.getElementById('interior').style.display = 'flex';
-        player.hp = 100; // Heal
-        updateUI();
-    }
-
-    function leaveCenter() {
-        document.getElementById('interior').style.display = 'none';
-        world.y -= 40; // Step away from door
-        updateUI();
-    }
-
-    function startBattle() {
-        document.getElementById('battle-screen').style.display = 'flex';
-        enemy = { hp: 100 };
-        document.getElementById('e-sprite').innerHTML = `<div class="duck" style="--c:#555"></div>`;
+    function startBattle(gym) {
+        isGym = gym;
+        const b = document.getElementById('battle-screen');
+        b.style.display = 'flex';
+        enemy = { hp: 100, lvl: gym ? 50 : player.lvl };
+        document.getElementById('battle-title').innerText = gym ? "GYM LEADER BATTLE" : "WILD DUCK";
+        document.getElementById('e-sprite').innerHTML = `<div class="duck" style="--c:${gym ? '#9b59b6' : '#555'}"></div>`;
         updateBars();
     }
 
     function attack() {
-        enemy.hp -= 50;
+        enemy.hp -= 25 + (player.lvl);
         if(enemy.hp <= 0) {
-            player.lvl++;
-            player.bread += 20;
+            player.bread += isGym ? 1000 : 50;
+            player.lvl += isGym ? 10 : 1;
             document.getElementById('battle-screen').style.display = 'none';
+            if(isGym) alert("YOU ARE THE DUCKÉMON CHAMPION!");
         } else {
-            player.hp -= 20;
+            player.hp -= 10;
         }
         updateBars();
-        updateUI();
-        if(player.hp <= 0) { alert("Fainted!"); location.reload(); }
+        if(player.hp <= 0) { alert("Whited out!"); location.reload(); }
     }
 
-    function updateBars() {
-        document.getElementById('e-hp').style.width = enemy.hp + '%';
-        document.getElementById('p-hp').style.width = player.hp + '%';
+    function enterBuilding(id) {
+        document.getElementById(id).style.display = 'flex';
+        player.hp = 100;
     }
 
-    function updateUI() {
-        document.getElementById('map').style.transform = `translate(${world.x}px, ${world.y}px)`;
-        document.getElementById('duck-center').style.transform = `translate(${world.x}px, ${world.y}px)`;
-        document.getElementById('lvl').innerText = player.lvl;
-        document.getElementById('bread').innerText = player.bread;
-        document.getElementById('hp-stat').innerText = player.hp;
-        document.getElementById('p-sprite').style.setProperty('--c', player.color);
-    }
-</script>
-</body>
-</html>
+    function exitBuilding() {
+        document.querySelectorAll('.overlay').
