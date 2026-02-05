@@ -2,253 +2,133 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Duckémon: Titan of Industry</title>
+    <title>Duckémon: Elemental Tides</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         :root { 
             --grass: #5fb35f; --water: #4a90e2; --accent: #f1c40f; 
-            --panel: rgba(10, 10, 20, 0.98); --border: #ecf0f1;
-            --skill-bg: #2c3e50;
+            --panel: rgba(10, 10, 20, 0.98);
         }
-        * { box-sizing: border-box; }
+        
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; font-family: 'Press Start 2P', cursive; color: #fff; overflow: hidden; image-rendering: pixelated; }
 
-        /* --- UI ENGINE --- */
-        .screen { display: none; position: absolute; inset: 0; z-index: 2000; background: var(--panel); flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(10px); }
-        .modal { background: #111; border: 4px solid var(--border); padding: 20px; width: 90%; max-width: 800px; max-height: 85vh; overflow-y: auto; position: relative; }
-        
-        /* --- SKILL TREE GRID --- */
-        .skill-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; margin-top: 20px; }
-        .skill-card { background: var(--skill-bg); border: 2px solid #555; padding: 10px; font-size: 7px; text-align: left; cursor: pointer; }
-        .skill-card:hover { border-color: var(--accent); }
-        .skill-card.locked { opacity: 0.5; cursor: not-allowed; }
-        .skill-card.bought { border-color: #2ecc71; background: #1b2631; }
-
-        /* --- SHOP STUFF --- */
-        .shop-item { display: flex; justify-content: space-between; align-items: center; background: #222; padding: 10px; margin: 5px 0; border: 1px solid #444; }
-
-        /* --- HUD --- */
-        #hud { position: absolute; bottom: 0; width: 100%; background: var(--panel); padding: 15px; display: flex; justify-content: space-around; font-size: 8px; border-top: 4px solid var(--accent); z-index: 500; }
-        .btn { font-family: 'Press Start 2P'; padding: 10px; border: none; background: var(--border); color: #000; cursor: pointer; font-size: 8px; margin: 2px; }
-        
-        /* --- GAMEWORLD --- */
+        /* --- THE ATMOSPHERE --- */
+        #viewport { position: relative; width: 100vw; height: 100vh; overflow: hidden; transition: background 2s; }
+        #weather-layer { position: absolute; inset: 0; pointer-events: none; z-index: 1000; opacity: 0.3; }
         #world { position: absolute; transition: transform 0.1s; }
-        .tile { width: 64px; height: 64px; position: absolute; border: 1px solid rgba(255,255,255,0.01); }
-        .t-0 { background: var(--grass); } .t-1 { background: var(--water); }
+        
+        /* Day/Night Overlay */
+        #time-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 900; transition: background 5s; }
+
+        .tile { width: 64px; height: 64px; position: absolute; }
+        .t-0 { background: var(--grass); } 
+        .t-1 { background: var(--water); }
+
+        /* --- SPRITES --- */
+        .pixel-duck {
+            width: 4px; height: 4px; background: transparent;
+            box-shadow: 8px 4px 0 var(--c), 12px 4px 0 var(--c), 16px 4px 0 var(--c), 8px 8px 0 var(--c), 12px 8px 0 var(--c), 16px 8px 0 var(--c), 20px 8px 0 #e67e22, 4px 12px 0 var(--c), 8px 12px 0 var(--c), 12px 12px 0 var(--c), 16px 12px 0 var(--c), 16px 4px 0 #000, 12px 8px 0 #ff6b6b;
+            position: absolute; transform: scale(3.5);
+        }
+
         #player-container { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 100; }
+
+        /* --- UI ELEMENTS --- */
+        #hud { position: absolute; bottom: 0; width: 100%; background: var(--panel); padding: 15px; display: flex; justify-content: space-around; font-size: 8px; border-top: 4px solid var(--accent); z-index: 1100; }
+        .status-tag { background: #333; padding: 5px; border: 1px solid var(--accent); }
     </style>
 </head>
 <body onload="init()">
 
 <div id="viewport">
+    <div id="time-overlay"></div>
+    <div id="weather-layer"></div>
     <div id="world"></div>
-    <div id="player-container"><div id="p-sprite" class="pixel-duck" style="--c:var(--accent)"></div></div>
-
-    <div id="skill-screen" class="screen">
-        <div class="modal">
-            <h2 style="color:var(--accent)">SKILL TREE</h2>
-            <p style="font-size: 8px;">SKILL POINTS: <span id="sp-val">0</span> (Earn 1 per Level)</p>
-            <div class="skill-grid" id="skill-tree-content">
-                </div>
-            <br>
-            <button class="btn" onclick="toggleScreen('skill-screen')">CLOSE</button>
-        </div>
-    </div>
-
-    <div id="shop-screen" class="screen">
-        <div class="modal">
-            <h2 style="color:var(--accent)">MEGA MART</h2>
-            <p>BREAD: <span class="bread-val">0</span>🥖</p>
-            <div id="shop-items">
-                <div class="shop-item">
-                    <span>Golden Beak (Permanent ATK +10)</span>
-                    <button class="btn" onclick="buyPermanent('atk', 500)">500🥖</button>
-                </div>
-                <div class="shop-item">
-                    <span>Rocket Shoes (Move Speed x2)</span>
-                    <button class="btn" onclick="buyPermanent('speed', 1000)">1000🥖</button>
-                </div>
-                <div class="shop-item">
-                    <span>Magnifying Glass (Rare Encounter Up)</span>
-                    <button class="btn" onclick="buyPermanent('rare', 1500)">1500🥖</button>
-                </div>
-                <div class="shop-item">
-                    <span>Auto-Clicker Bot (Dps +5)</span>
-                    <button class="btn" onclick="buyPermanent('auto', 2000)">2000🥖</button>
-                </div>
-            </div>
-            <button class="btn" onclick="toggleScreen('shop-screen')">CLOSE</button>
-        </div>
-    </div>
-
-    <div id="battle-screen" class="screen">
-        <div class="modal">
-            <h2 id="b-title" style="color:var(--accent)">WILD ENCOUNTER</h2>
-            <div id="e-hp-bar" style="width:100%; height:20px; background:#333; border:2px solid #fff; margin:20px 0;">
-                <div id="e-hp-fill" style="width:100%; height:100%; background:#e74c3c;"></div>
-            </div>
-            <div id="e-sprite-battle" onclick="doManualDamage()" style="position:relative; transform:scale(10); margin:50px auto; cursor:pointer;"></div>
-            <button class="btn" onclick="run()">RUN</button>
-        </div>
+    
+    <div id="player-container">
+        <div id="p-sprite" class="pixel-duck" style="--c:var(--accent)"></div>
     </div>
 
     <div id="hud">
-        <div>🥖 <span class="bread-val">0</span></div>
-        <div>LVL: <span id="p-lvl">1</span></div>
-        <button class="btn" onclick="toggleScreen('skill-screen')">SKILLS</button>
-        <button class="btn" onclick="toggleScreen('shop-screen')">SHOP</button>
-        <div>ATK: <span id="stat-atk">5</span></div>
+        <div class="status-tag">TIME: <span id="clock">12:00</span></div>
+        <div class="status-tag">WEATHER: <span id="weather-txt">CLEAR</span></div>
+        <div class="status-tag">BREAD: <span id="bread">0</span></div>
+        <div class="status-tag">COORD: <span id="coords">0,0</span></div>
     </div>
 </div>
 
 <script>
-    // --- DATA ---
-    let player = JSON.parse(localStorage.getItem('duckSave')) || {
-        bread: 0, lvl: 1, sp: 0, atk: 5, steps: 0, wins: 0,
-        skills: [], upgrades: { speed: 1, rare: 1, auto: 0 }
-    };
     let pos = { x: 0, y: 0 };
-    let enemy = null;
+    let player = { bread: 0, steps: 0 };
+    let gameTime = 720; // Starts at Noon (720 minutes)
+    let currentWeather = 'CLEAR';
     let rendered = {};
 
-    const SKILLS = [
-        { id: 'crit', name: 'Critical Hit', desc: '5% chance for 2x DMG', cost: 1 },
-        { id: 'bread1', name: 'Bread Magnet', desc: '+20% Bread from wins', cost: 1 },
-        { id: 'fast', name: 'Fast Fingers', desc: '+2 Click DMG', cost: 2 },
-        { id: 'boss', name: 'Boss Slayer', desc: '+50% DMG to World Bosses', cost: 3 },
-        { id: 'vamp', name: 'Vampire Quack', desc: 'Heal on every click', cost: 2 },
-        { id: 'scout', name: 'Scout Sense', desc: 'See enemy HP exact numbers', cost: 1 },
-        { id: 'titan', name: 'Titan Body', desc: 'Double your total HP', cost: 5 },
-        { id: 'god', name: 'God Duck', desc: 'Clicks deal % of Max HP', cost: 10 }
-    ];
-
     function init() {
-        buildSkillTree();
         renderMap();
-        setInterval(autoTick, 1000);
-        window.addEventListener('keydown', e => {
-            if(document.querySelector('.screen[style*="flex"]')) return;
-            const s = 64 * player.upgrades.speed;
-            if(e.key.toLowerCase()==='w') pos.y+=s;
-            if(e.key.toLowerCase()==='s') pos.y-=s;
-            if(e.key.toLowerCase()==='a') pos.x-=s;
-            if(e.key.toLowerCase()==='d') pos.x+=s;
+        setInterval(updateWorldState, 2000); // Progress time and weather
+        window.addEventListener('keydown', (e) => {
+            const k = e.key.toLowerCase();
+            const s = 64;
+            if(k === 'w') pos.y += s;
+            if(k === 's') pos.y -= s;
+            if(k === 'a') pos.x -= s;
+            if(k === 'd') pos.x += s;
             player.steps++;
             renderMap();
-            if(Math.random() < (0.05 * player.upgrades.rare)) startBattle();
-            save();
         });
     }
 
-    function buildSkillTree() {
-        const cont = document.getElementById('skill-tree-content');
-        cont.innerHTML = '';
-        SKILLS.forEach(s => {
-            const isBought = player.skills.includes(s.id);
-            const card = document.createElement('div');
-            card.className = `skill-card ${isBought ? 'bought' : ''}`;
-            card.innerHTML = `<strong>${s.name}</strong><br>${s.desc}<br>Cost: ${s.cost} SP`;
-            card.onclick = () => buySkill(s);
-            cont.appendChild(card);
-        });
-        document.getElementById('sp-val').innerText = player.sp;
-    }
+    function updateWorldState() {
+        // 1. Advance Time
+        gameTime = (gameTime + 10) % 1440;
+        let hours = Math.floor(gameTime / 60);
+        let mins = gameTime % 60;
+        document.getElementById('clock').innerText = `${hours.toString().padStart(2,'0')}:${mins.toString().padStart(2,'0')}`;
 
-    function buySkill(skill) {
-        if(player.sp >= skill.cost && !player.skills.includes(skill.id)) {
-            player.sp -= skill.cost;
-            player.skills.push(skill.id);
-            if(skill.id === 'fast') player.atk += 2;
-            buildSkillTree();
-            save();
+        // 2. Day/Night Visuals
+        const overlay = document.getElementById('time-overlay');
+        if (hours >= 20 || hours <= 5) overlay.style.background = "rgba(0, 0, 50, 0.5)"; // Night
+        else if (hours >= 17) overlay.style.background = "rgba(255, 100, 0, 0.2)"; // Sunset
+        else overlay.style.background = "transparent"; // Day
+
+        // 3. Random Weather
+        if (Math.random() < 0.1) {
+            const weathers = ['CLEAR', 'RAIN', 'FOG', 'SANDSTORM'];
+            currentWeather = weathers[Math.floor(Math.random() * weathers.length)];
+            document.getElementById('weather-txt').innerText = currentWeather;
+            applyWeatherEffect();
         }
     }
 
-    function buyPermanent(type, cost) {
-        if(player.bread >= cost) {
-            player.bread -= cost;
-            if(type === 'atk') player.atk += 10;
-            if(type === 'speed') player.upgrades.speed = 2;
-            if(type === 'rare') player.upgrades.rare = 1.5;
-            if(type === 'auto') player.upgrades.auto += 5;
-            updateUI();
-            save();
-        }
-    }
-
-    function startBattle() {
-        document.getElementById('battle-screen').style.display = 'flex';
-        enemy = { hp: 100 + (player.lvl * 20), maxHp: 100 + (player.lvl * 20) };
-        document.getElementById('e-sprite-battle').style.setProperty('--c', '#'+(Math.random()*0xFFFFFF<<0).toString(16));
-    }
-
-    function doManualDamage() {
-        if(!enemy) return;
-        let dmg = player.atk;
-        if(player.skills.includes('crit') && Math.random() < 0.1) dmg *= 2;
-        enemy.hp -= dmg;
-        checkWin();
-    }
-
-    function autoTick() {
-        if(enemy && player.upgrades.auto > 0) {
-            enemy.hp -= player.upgrades.auto;
-            checkWin();
-        }
-    }
-
-    function checkWin() {
-        if(enemy && enemy.hp <= 0) {
-            let reward = 50 + (player.lvl * 10);
-            if(player.skills.includes('bread1')) reward *= 1.2;
-            player.bread += Math.floor(reward);
-            player.wins++;
-            if(player.wins % 3 === 0) { player.lvl++; player.sp++; }
-            run();
-        }
-        updateUI();
+    function applyWeatherEffect() {
+        const layer = document.getElementById('weather-layer');
+        if (currentWeather === 'RAIN') layer.style.background = "linear-gradient(to bottom, transparent, #4a90e2)";
+        else if (currentWeather === 'SANDSTORM') layer.style.background = "#d2b48c";
+        else if (currentWeather === 'FOG') layer.style.background = "#fff";
+        else layer.style.background = "transparent";
     }
 
     function renderMap() {
         const world = document.getElementById('world');
         for (let i = -8; i < 8; i++) {
             for (let j = -8; j < 8; j++) {
-                let tx = Math.floor(pos.x/64)+i, ty = Math.floor(pos.y/64)+j;
-                if (!rendered[`${tx},${ty}`]) {
+                let tx = Math.floor(pos.x / 64) + i;
+                let ty = Math.floor(pos.y / 64) + j;
+                let key = `${tx},${ty}`;
+                if (!rendered[key]) {
                     const t = document.createElement('div');
-                    t.className = `tile t-${Math.abs(tx+ty)%2}`;
-                    t.style.left = tx*64+'px'; t.style.top = -ty*64+'px';
-                    world.appendChild(t); rendered[`${tx},${ty}`] = true;
+                    t.className = `tile t-${Math.abs(tx + ty) % 2}`;
+                    t.style.left = tx * 64 + 'px';
+                    t.style.top = -ty * 64 + 'px';
+                    world.appendChild(t);
+                    rendered[key] = true;
                 }
             }
         }
-        world.style.transform = `translate(${-pos.x+(window.innerWidth/2)}px, ${pos.y+(window.innerHeight/2)}px)`;
-        updateUI();
+        world.style.transform = `translate(${-pos.x + (window.innerWidth/2)}px, ${pos.y + (window.innerHeight/2)}px)`;
+        document.getElementById('coords').innerText = `${Math.floor(pos.x/64)},${Math.floor(pos.y/64)}`;
     }
-
-    function updateUI() {
-        document.querySelectorAll('.bread-val').forEach(e => e.innerText = player.bread);
-        document.getElementById('p-lvl').innerText = player.lvl;
-        document.getElementById('stat-atk').innerText = player.atk;
-        if(enemy) document.getElementById('e-hp-fill').style.width = (enemy.hp / enemy.maxHp * 100) + '%';
-    }
-
-    function toggleScreen(id) {
-        const s = document.getElementById(id);
-        s.style.display = (s.style.display === 'flex') ? 'none' : 'flex';
-        updateUI();
-    }
-
-    function save() { localStorage.setItem('duckSave', JSON.stringify(player)); }
-    function run() { enemy = null; document.getElementById('battle-screen').style.display = 'none'; updateUI(); }
 </script>
-
-<style>
-    /* Sprite styling duplicated for battle visibility */
-    .pixel-duck {
-        width: 4px; height: 4px; background: transparent;
-        box-shadow: 8px 4px 0 var(--c), 12px 4px 0 var(--c), 16px 4px 0 var(--c), 8px 8px 0 var(--c), 12px 8px 0 var(--c), 16px 8px 0 var(--c), 20px 8px 0 #e67e22, 4px 12px 0 var(--c), 8px 12px 0 var(--c), 12px 12px 0 var(--c), 16px 12px 0 var(--c), 16px 4px 0 #000, 12px 8px 0 #ff6b6b;
-    }
-</style>
 </body>
 </html>
