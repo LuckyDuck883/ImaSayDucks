@@ -3,99 +3,204 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Duckémon: Soul-Link Zenith</title>
+    <title>Duckémon: Infinite Origin</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         :root { 
-            --grass: #5fb35f; --water: #4a90e2; --accent: #f1c40f; 
-            --panel: rgba(5, 5, 20, 0.98); --border: #ecf0f1;
+            --grass: #78C850; --forest: #2D5A27; --sand: #F0D060; --water: #6890F0;
+            --ui-bg: #f8f8f8; --ui-border: #706880;
         }
         * { box-sizing: border-box; touch-action: manipulation; user-select: none; }
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; font-family: 'Press Start 2P', cursive; color: #fff; overflow: hidden; image-rendering: pixelated; }
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #222; font-family: 'Press Start 2P', cursive; overflow: hidden; }
 
-        /* --- WORLD --- */
-        #viewport { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
-        #world { position: absolute; transition: transform 0.3s cubic-bezier(0.18, 0.89, 0.32, 1.2); }
-        .tile { width: 64px; height: 64px; position: absolute; border: 1px solid rgba(255,255,255,0.01); }
-        .t-0 { background: var(--grass); } .t-1 { background: var(--water); }
-        #time-overlay { position: absolute; inset: 0; pointer-events: none; z-index: 900; transition: background 5s; }
+        /* --- THE WORLD ENGINE --- */
+        #viewport { position: relative; width: 100vw; height: 100vh; overflow: hidden; border: 8px solid #000; }
+        #world { position: absolute; transition: transform 0.2s linear; }
+        .tile { width: 64px; height: 64px; position: absolute; }
+        .t-grass { background: var(--grass); border: 1px solid rgba(0,0,0,0.05); }
+        .t-forest { background: var(--forest); }
+        .t-sand { background: var(--sand); }
+        .t-water { background: var(--water); }
 
-        /* --- SPRITES --- */
-        .pixel-duck {
-            width: 4px; height: 4px; background: transparent;
-            box-shadow: 8px 4px 0 var(--c), 12px 4px 0 var(--c), 16px 4px 0 var(--c), 8px 8px 0 var(--c), 12px 8px 0 var(--c), 16px 8px 0 var(--c), 20px 8px 0 #e67e22, 4px 12px 0 var(--c), 8px 12px 0 var(--c), 12px 12px 0 var(--c), 16px 12px 0 var(--c), 16px 4px 0 #000, 12px 8px 0 #ff6b6b;
-            position: absolute; transform: scale(3.5); transition: transform 0.1s, left 0.3s, top 0.3s;
+        /* --- POKEMON STYLE SPRITE --- */
+        .duck-sprite {
+            width: 48px; height: 48px; position: absolute;
+            background-size: contain; background-repeat: no-repeat;
+            image-rendering: pixelated; z-index: 1000;
+            transition: left 0.2s linear, top 0.2s linear;
         }
-        #player-container { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 1000; }
-        #follower { z-index: 999; opacity: 0; transition: left 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.2), top 0.4s cubic-bezier(0.18, 0.89, 0.32, 1.2), opacity 0.5s; }
-        
-        .walking { animation: bob 0.25s infinite; }
-        @keyframes bob { 0%, 100% { margin-top: 0; } 50% { margin-top: -6px; } }
+        /* Procedural Duck Drawing via CSS */
+        .pixel-art {
+            width: 4px; height: 4px; background: transparent;
+            box-shadow: 
+                8px 4px 0 #000, 12px 4px 0 #000, 16px 4px 0 #000,
+                4px 8px 0 #000, 8px 8px 0 var(--c), 12px 8px 0 var(--c), 16px 8px 0 var(--c), 20px 8px 0 #000,
+                4px 12px 0 #000, 8px 12px 0 var(--c), 12px 12px 0 var(--c), 16px 12px 0 var(--c), 20px 12px 0 #e67e22,
+                8px 16px 0 #000, 12px 16px 0 #000, 16px 16px 0 #000;
+            transform: scale(2.5); position: absolute;
+        }
 
-        /* --- UI & HUD --- */
-        #hud { position: absolute; bottom: 0; width: 100%; background: var(--panel); padding: 15px; display: flex; justify-content: space-around; align-items: center; font-size: 8px; border-top: 4px solid var(--accent); z-index: 1100; }
-        #d-pad { position: absolute; bottom: 110px; left: 20px; z-index: 1500; display: grid; grid-template-columns: repeat(3, 60px); gap: 8px; }
-        .d-btn { width: 60px; height: 60px; background: rgba(255,255,255,0.1); border: 2px solid #fff; display: flex; align-items: center; justify-content: center; font-size: 18px; border-radius: 12px; }
-        
-        .screen { display: none; position: absolute; inset: 0; z-index: 2000; background: var(--panel); flex-direction: column; align-items: center; justify-content: center; backdrop-filter: blur(15px); padding: 15px; }
-        .modal { background: #000; border: 4px solid #fff; padding: 20px; width: 100%; max-width: 500px; text-align: center; }
-        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px; }
-        .card { background: #111; border: 2px solid #333; padding: 12px; font-size: 7px; text-align: left; }
-        .bought { border-color: #2ecc71 !important; }
-        .btn { font-family: 'Press Start 2P'; padding: 10px; background: #fff; color: #000; font-size: 7px; border: none; cursor: pointer; }
+        /* --- UI OVERLAYS --- */
+        .screen { position: absolute; inset: 0; z-index: 2000; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; backdrop-filter: blur(5px); }
+        .pokedex-card { 
+            background: #e0e0e0; border: 6px double var(--ui-border); width: 90%; max-width: 450px; 
+            padding: 20px; border-radius: 10px; text-align: center; color: #333;
+        }
+        .btn { 
+            font-family: 'Press Start 2P'; padding: 12px; margin: 5px; 
+            border: 3px solid var(--ui-border); background: #fff; cursor: pointer; font-size: 8px; 
+        }
+        .btn:active { background: #bbb; }
 
-        .particle { position: absolute; pointer-events: none; z-index: 850; border-radius: 50%; animation: fall linear infinite; }
-        @keyframes fall { 0% { transform: translateY(-10vh); opacity: 0; } 50% { opacity: 1; } 100% { transform: translateY(110vh); opacity: 0; } }
+        /* --- HUD --- */
+        #hud { 
+            position: absolute; bottom: 0; width: 100%; background: var(--ui-bg); 
+            border-top: 4px solid var(--ui-border); padding: 10px; display: flex; 
+            justify-content: space-between; align-items: center; font-size: 10px; z-index: 1500;
+        }
+
+        /* --- JOYSTICK --- */
+        #mobile-ctrl { position: absolute; bottom: 80px; left: 20px; display: grid; grid-template-columns: repeat(3, 50px); gap: 5px; z-index: 1600; }
     </style>
 </head>
 <body onload="init()">
 
 <div id="viewport">
-    <div id="time-overlay"></div>
-    <div id="particle-layer"></div>
     <div id="world"></div>
-    
-    <div id="follower" class="pixel-duck"></div>
-    <div id="player-container"><div id="p-sprite" class="pixel-duck" style="--c:var(--accent)"></div></div>
-
-    <div id="d-pad">
-        <div></div><div class="d-btn" onclick="move(0, 64)">↑</div><div></div>
-        <div class="d-btn" onclick="move(-64, 0)">←</div><div class="d-btn" onclick="move(0, -64)">↓</div><div class="d-btn" onclick="move(64, 0)">→</div>
+    <div id="player-container" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 1001;">
+        <div id="player-sprite" class="pixel-art" style="--c: #f1c40f;"></div>
     </div>
 
-    <div id="battle-screen" class="screen">
-        <div class="modal">
-            <h2 id="e-name" style="color:var(--accent); font-size: 10px;">WILD DUCK</h2>
-            <div id="e-sprite-battle" class="pixel-duck" onclick="hit()" style="position:relative; transform:scale(10); margin: 60px auto;"></div>
-            <div style="width:100%; height:15px; background:#222; border:2px solid #fff; margin-bottom:15px;"><div id="e-hp" style="height:100%; background:red; width:100%;"></div></div>
-            <div class="grid"><button class="btn" onclick="capture()">CATCH</button><button class="btn" onclick="run()">FLEE</button></div>
-        </div>
-    </div>
-
-    <div id="menu-screen" class="screen">
-        <div class="modal">
-            <h2>COMMANDER</h2>
-            <div class="grid">
-                <div class="card" id="c-egg" onclick="buy('egg', 250)">EGG (250🥖)</div>
-                <div class="card" onclick="buy('auto', 600)">AUTO-Q (600🥖)</div>
-                <div class="card" id="s-crit" onclick="skill('crit')">CRIT (1 SP)</div>
-                <div class="card" id="s-titan" onclick="skill('titan')">TITAN (2 SP)</div>
+    <div id="custom-screen" class="screen" style="display: flex;">
+        <div class="pokedex-card">
+            <h2 style="font-size: 12px;">CHOOSE YOUR DUCK</h2>
+            <div style="height: 100px; position: relative; margin: 20px 0;">
+                <div id="preview-duck" class="pixel-art" style="--c: #f1c40f; left: 45%; top: 20%;"></div>
             </div>
-            <br><button class="btn" onclick="toggle('menu-screen')">CLOSE</button>
+            <div class="grid">
+                <button class="btn" onclick="setDuck('#f1c40f')">GOLD</button>
+                <button class="btn" onclick="setDuck('#ff6b6b')">FIRE</button>
+                <button class="btn" onclick="setDuck('#4ecdc4')">AQUA</button>
+                <button class="btn" onclick="setDuck('#9b59b6')">VOID</button>
+            </div>
+            <br>
+            <button class="btn" style="background: #78C850; color: white;" onclick="startGame()">START ADVENTURE</button>
         </div>
     </div>
 
     <div id="hud">
-        <div>🥖 <span class="bread">0</span></div>
-        <button class="btn" onclick="toggle('menu-screen')">MENU</button>
-        <div>LVL: <span id="p-lvl">1</span></div>
+        <div id="loc-text">ROUTE 1</div>
+        <div id="bread-count">🥖: 0</div>
+        <button class="btn" onclick="toggleCustom()">STYLE</button>
+    </div>
+
+    <div id="mobile-ctrl">
+        <div></div><button class="btn" onclick="inputMove(0, 64)">↑</button><div></div>
+        <button class="btn" onclick="inputMove(-64, 0)">←</button><button class="btn" onclick="inputMove(0, -64)">↓</button><button class="btn" onclick="inputMove(64, 0)">→</button>
     </div>
 </div>
 
 <script>
-    const TYPES = [{id:'FLAME',c:'#e74c3c'}, {id:'VOID',c:'#8e44ad'}, {id:'COSMIC',c:'#3498db'}, {id:'GOLD',c:'#f1c40f'}];
-    let p = JSON.parse(localStorage.getItem('duckSoulLink')) || { 
-        bread: 200, lvl: 1, sp: 0, steps: 0, atk: 15, skills: [], autos: 0, egg: 0, lastCaught: null 
-    };
-    let pos = {x:0, y:0}, rendered = {}, enemy = null, walking = false;
-    let history = [{x: 0, y: 0}];
+    let p = { x: 0, y: 0, color: '#f1c40f', bread: 0 };
+    let rendered = {};
+    let isMoving = false;
+
+    function init() {
+        renderWorld();
+        window.addEventListener('keydown', e => {
+            if(isMoving) return;
+            const k = e.key;
+            if(k === 'ArrowUp' || k === 'w') inputMove(0, 64);
+            if(k === 'ArrowDown' || k === 's') inputMove(0, -64);
+            if(k === 'ArrowLeft' || k === 'a') inputMove(-64, 0);
+            if(k === 'ArrowRight' || k === 'd') inputMove(64, 0);
+        });
+    }
+
+    function setDuck(color) {
+        p.color = color;
+        document.getElementById('preview-duck').style.setProperty('--c', color);
+        document.getElementById('player-sprite').style.setProperty('--c', color);
+    }
+
+    function startGame() {
+        document.getElementById('custom-screen').style.display = 'none';
+    }
+
+    function toggleCustom() {
+        const s = document.getElementById('custom-screen');
+        s.style.display = (s.style.display === 'flex') ? 'none' : 'flex';
+    }
+
+    function inputMove(mx, my) {
+        if(isMoving) return;
+        isMoving = true;
+        
+        // Sprite Direction Flip
+        if(mx !== 0) document.getElementById('player-sprite').style.transform = `scale(2.5) scaleX(${mx > 0 ? 1 : -1})`;
+
+        p.x += mx;
+        p.y += my;
+        
+        renderWorld();
+        
+        setTimeout(() => { 
+            isMoving = false;
+            if(Math.random() < 0.1) encounter();
+        }, 200);
+    }
+
+    function renderWorld() {
+        const w = document.getElementById('world');
+        const buffer = 8;
+        
+        let curX = Math.floor(p.x / 64);
+        let curY = Math.floor(p.y / 64);
+
+        for(let i = -buffer; i < buffer; i++) {
+            for(let j = -buffer; j < buffer; j++) {
+                let tx = curX + i;
+                let ty = curY + j;
+                let id = `${tx},${ty}`;
+
+                if(!rendered[id]) {
+                    const tile = document.createElement('div');
+                    tile.className = 'tile ' + getTerrain(tx, ty);
+                    tile.style.left = (tx * 64) + 'px';
+                    tile.style.top = (-ty * 64) + 'px';
+                    w.appendChild(tile);
+                    rendered[id] = true;
+                }
+            }
+        }
+        w.style.transform = `translate(${-p.x + window.innerWidth/2}px, ${p.y + window.innerHeight/2}px)`;
+        updateHUD(getTerrain(curX, curY));
+    }
+
+    function getTerrain(x, y) {
+        // Procedural terrain logic
+        let noise = Math.abs(Math.sin(x * 0.1) + Math.cos(y * 0.1));
+        if(noise > 1.4) return 't-water';
+        if(noise > 1.1) return 't-forest';
+        if(noise < 0.3) return 't-sand';
+        return 't-grass';
+    }
+
+    function updateHUD(terrain) {
+        let loc = "ROUTE 1";
+        if(terrain === 't-water') loc = "CERULEAN LAKE";
+        if(terrain === 't-forest') loc = "VIRIDIAN WOODS";
+        if(terrain === 't-sand') loc = "DESERT ROUTE";
+        document.getElementById('loc-text').innerText = loc;
+    }
+
+    function encounter() {
+        p.bread += 10;
+        document.getElementById('bread-count').innerText = `🥖: ${p.bread}`;
+        // Brief shake effect
+        document.body.style.backgroundColor = "#fff";
+        setTimeout(() => document.body.style.backgroundColor = "#222", 50);
+    }
+</script>
+</body>
+</html>
