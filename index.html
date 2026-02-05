@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Duckémon: Trainer's Edition</title>
+    <title>Duckémon: Progenitor & Pedestrian</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         :root { 
             --grass: #5fb35f; --water: #4a90e2; --accent: #f1c40f; 
-            --panel: rgba(15, 15, 20, 0.98); --border: #ecf0f1;
+            --panel: rgba(15, 15, 25, 0.98); --border: #ecf0f1;
         }
         
         * { box-sizing: border-box; }
@@ -34,27 +34,31 @@
             position: absolute; transform: scale(3.5);
         }
 
+        .pixel-egg {
+            width: 4px; height: 4px; background: transparent;
+            box-shadow: 8px 4px 0 #eee, 12px 4px 0 #eee, 4px 8px 0 #ddd, 8px 8px 0 #fff, 12px 8px 0 #fff, 16px 8px 0 #ddd, 4px 12px 0 #ddd, 8px 12px 0 #fff, 12px 12px 0 #fff, 16px 12px 0 #ddd, 8px 16px 0 #eee, 12px 16px 0 #eee;
+            position: relative; transform: scale(4); display: inline-block; margin: 20px;
+        }
+
         #player-container { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 100; }
 
-        /* --- UI SCREENS --- */
+        /* --- UI & README --- */
         .screen { 
             display: none; position: absolute; inset: 0; z-index: 2000; 
             background: var(--panel); flex-direction: column; align-items: center; justify-content: center;
-            backdrop-filter: blur(8px);
+            backdrop-filter: blur(10px);
         }
 
         .modal {
-            background: #1a252f; border: 4px solid var(--border); 
-            padding: 30px; width: 550px; text-align: center; border-radius: 8px;
+            background: #1a1a2e; border: 4px solid var(--border); 
+            padding: 25px; width: 600px; max-height: 80vh; overflow-y: auto; text-align: center;
         }
 
         .btn { 
             font-family: 'Press Start 2P'; padding: 12px; border: none; 
-            background: var(--border); color: #1a252f; cursor: pointer; font-size: 8px; 
-            margin: 5px; transition: 0.1s; border-bottom: 4px solid #bdc3c7;
+            background: var(--border); color: #1a1a2e; cursor: pointer; font-size: 8px; 
+            margin: 5px; border-bottom: 4px solid #bdc3c7;
         }
-        .btn:hover { background: #fff; transform: scale(1.05); }
-        .btn:disabled { background: #555; border-bottom: none; cursor: not-allowed; }
 
         /* --- HUD --- */
         #hud { 
@@ -63,15 +67,8 @@
             z-index: 500; border-top: 4px solid var(--accent);
         }
 
-        .stat-group { display: flex; flex-direction: column; gap: 5px; }
-        .label { font-size: 8px; color: var(--accent); text-transform: uppercase; }
-
-        /* --- FLOATING TEXT --- */
-        .float-text {
-            position: absolute; color: var(--accent); font-size: 10px;
-            animation: floatUp 0.8s ease-out forwards; pointer-events: none; z-index: 3000;
-        }
-        @keyframes floatUp { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-50px); opacity: 0; } }
+        .readme-text { text-align: left; font-size: 8px; line-height: 1.6; color: #ccc; }
+        .highlight { color: var(--accent); }
     </style>
 </head>
 <body onload="init()">
@@ -80,174 +77,158 @@
     <div id="world"></div>
     <div id="player-container"><div id="p-sprite" class="pixel-duck" style="--c:var(--accent)"></div></div>
 
+    <div id="readme-screen" class="screen" style="display: flex;">
+        <div class="modal">
+            <h2 style="color:var(--accent)">DUCKÉMON GUIDE</h2>
+            <div class="readme-text">
+                <p>--- <span class="highlight">MOVEMENT</span> ---</p>
+                <p>[W,A,S,D] - Walk through the infinite biomes.</p>
+                <p>[SHIFT] - Speed boost (Sprint).</p>
+                <br>
+                <p>--- <span class="highlight">BATTLE</span> ---</p>
+                <p>ENCOUNTER - Step on tiles to find wild ducks.</p>
+                <p>CLICKING - Click the wild duck to deal damage.</p>
+                <p>QUACK POWER - Earn 🥖 by clicking and winning.</p>
+                <br>
+                <p>--- <span class="highlight">HATCHING</span> ---</p>
+                <p>Buy EGGS in the shop. Walk steps to hatch them!</p>
+            </div>
+            <button class="btn" onclick="toggleScreen('readme-screen')">START GAME</button>
+        </div>
+    </div>
+
     <div id="battle-screen" class="screen">
         <div class="modal">
-            <h2 style="color:var(--accent)">ENCOUNTER!</h2>
-            <div id="e-sprite-battle" class="pixel-duck" onclick="clickDamage(event)" style="position:relative; transform:scale(12) scaleX(-1); margin: 60px auto; cursor:crosshair;"></div>
-            <div class="label">Enemy HP</div>
-            <div style="width: 100%; height: 20px; background: #222; border: 2px solid #fff; margin: 10px 0;">
+            <h2 style="color:var(--accent)">BATTLE</h2>
+            <div id="e-sprite-battle" class="pixel-duck" onclick="clickDamage(event)" style="position:relative; transform:scale(10) scaleX(-1); margin: 60px auto; cursor:crosshair;"></div>
+            <div style="width: 100%; height: 20px; background: #222; border: 2px solid #fff;">
                 <div id="e-hp" style="height:100%; background:#e74c3c; width:100%;"></div>
             </div>
-            <button class="btn" onclick="run()">RETREAT</button>
+            <button class="btn" onclick="run()">RUN</button>
         </div>
     </div>
 
     <div id="shop-screen" class="screen">
         <div class="modal">
-            <h2 style="color:var(--accent)">DUCK MART</h2>
+            <h2 style="color:var(--accent)">SHOP</h2>
             <p>BREAD: <span class="bread-val">0</span>🥖</p>
-            <div style="display:grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 20px;">
-                <button class="btn" onclick="buyItem('seeds', 30)">BUY PREMIUM SEEDS (30🥖)</button>
-                <button class="btn" onclick="buyItem('auto', 150)">AUTO-QUACKER (150🥖)</button>
-            </div>
+            <button class="btn" onclick="buyEgg()">BUY MYSTERY EGG (200🥖)</button>
             <button class="btn" onclick="toggleScreen('shop-screen')">CLOSE</button>
         </div>
     </div>
 
-    <div id="stats-screen" class="screen">
+    <div id="team-screen" class="screen">
         <div class="modal">
-            <h2 style="color:var(--accent)">TEAM INFO</h2>
-            <div style="display:flex; justify-content: space-around; align-items: center; margin: 30px 0;">
-                <div class="pixel-duck" style="--c:var(--accent); position:relative; transform:scale(8);"></div>
-                <div style="text-align: left; font-size: 10px; line-height: 2;">
-                    TYPE: <span style="color:var(--accent)">GOLD/CLICKER</span><br>
-                    LVL: <span id="p-lvl">1</span><br>
-                    ATK: <span id="p-atk">2</span><br>
-                    FOOD: <span id="p-food">0</span> BAGS
-                </div>
+            <h2 style="color:var(--accent)">INCUBATOR</h2>
+            <div id="egg-display">
+                <p>No eggs in incubator.</p>
             </div>
-            <button class="btn" id="feed-btn" onclick="feedDuck()">FEED (BOOSTS ATK)</button>
-            <button class="btn" onclick="toggleScreen('stats-screen')">CLOSE</button>
+            <button class="btn" onclick="toggleScreen('team-screen')">CLOSE</button>
         </div>
     </div>
 
     <div id="hud">
-        <div class="stat-group">
-            <div class="label">Inventory</div>
-            <div>🥖 <span class="bread-val">0</span> | 📦 <span id="food-count">0</span></div>
-        </div>
-        <div style="display: flex; gap: 10px;">
+        <div>🥖 <span class="bread-val">0</span> | STEPS: <span id="step-count">0</span></div>
+        <div>
             <button class="btn" onclick="toggleScreen('shop-screen')">SHOP</button>
-            <button class="btn" onclick="toggleScreen('stats-screen')">TEAM</button>
+            <button class="btn" onclick="toggleScreen('team-screen')">EGG</button>
+            <button class="btn" onclick="toggleScreen('readme-screen')">?</button>
         </div>
-        <div class="stat-group" style="text-align: right;">
-            <div class="label">Location</div>
-            <div id="coords">0, 0</div>
-        </div>
+        <div>LVL: <span id="p-lvl">1</span></div>
     </div>
 </div>
 
 <script>
     let pos = { x: 0, y: 0 };
-    let player = { bread: 50, atk: 2, autos: 0, seeds: 0, lvl: 1 };
+    let player = { bread: 250, atk: 5, steps: 0, lvl: 1, egg: null };
     let enemy = null;
     let rendered = {};
 
     function init() {
         renderMap();
-        setInterval(() => { if(enemy) { enemy.hp -= (player.autos * 3); checkVictory(); } }, 1000);
         window.addEventListener('keydown', (e) => {
             if(document.querySelector('.screen[style*="display: flex"]')) return;
             const k = e.key.toLowerCase();
-            const s = 64;
-            if(k === 'w') pos.y += s; if(k === 's') pos.y -= s;
-            if(k === 'a') pos.x -= s; if(k === 'd') pos.x += s;
-            renderMap();
-            if(Math.random() < 0.08) startBattle();
+            if(['w','a','s','d'].includes(k)) {
+                pos.y += (k==='w'?64:k==='s'?-64:0);
+                pos.x += (k==='d'?64:k==='a'?-64:0);
+                player.steps++;
+                checkEgg();
+                renderMap();
+                if(Math.random() < 0.08) startBattle();
+            }
         });
     }
 
     function renderMap() {
         const world = document.getElementById('world');
-        for (let i = -10; i < 10; i++) {
-            for (let j = -10; j < 10; j++) {
-                let tx = Math.floor(pos.x / 64) + i;
-                let ty = Math.floor(pos.y / 64) + j;
+        for (let i = -8; i < 8; i++) {
+            for (let j = -8; j < 8; j++) {
+                let tx = Math.floor(pos.x/64)+i, ty = Math.floor(pos.y/64)+j;
                 let key = `${tx},${ty}`;
                 if (!rendered[key]) {
                     const t = document.createElement('div');
-                    t.className = `tile t-${Math.abs(tx + ty) % 2}`;
-                    t.style.left = tx * 64 + 'px';
-                    t.style.top = -ty * 64 + 'px';
-                    world.appendChild(t);
-                    rendered[key] = true;
+                    t.className = `tile t-${Math.abs(tx+ty)%2}`;
+                    t.style.left = tx*64+'px'; t.style.top = -ty*64+'px';
+                    world.appendChild(t); rendered[key] = true;
                 }
             }
         }
-        world.style.transform = `translate(${-pos.x + (window.innerWidth/2)}px, ${pos.y + (window.innerHeight/2)}px)`;
-        document.getElementById('coords').innerText = `${Math.floor(pos.x/64)}, ${Math.floor(pos.y/64)}`;
+        world.style.transform = `translate(${-pos.x+(window.innerWidth/2)}px, ${pos.y+(window.innerHeight/2)}px)`;
+        updateUI();
+    }
+
+    function buyEgg() {
+        if(player.bread >= 200 && !player.egg) {
+            player.bread -= 200;
+            player.egg = { target: player.steps + 50 };
+            alert("Egg placed in Incubator! Walk 50 steps.");
+            updateUI();
+        } else { alert("Can't buy egg right now!"); }
+    }
+
+    function checkEgg() {
+        if(player.egg && player.steps >= player.egg.target) {
+            player.egg = null;
+            player.lvl++;
+            player.atk += 10;
+            alert("HATCHED! Your duck evolved and stats increased!");
+        }
     }
 
     function startBattle() {
         document.getElementById('battle-screen').style.display = 'flex';
         enemy = { hp: 100, color: '#'+(Math.random()*0xFFFFFF<<0).toString(16) };
         document.getElementById('e-sprite-battle').style.setProperty('--c', enemy.color);
-        updateUI();
     }
 
-    function clickDamage(e) {
+    function clickDamage() {
         if(!enemy) return;
         enemy.hp -= player.atk;
-        player.bread += 1;
-        createFloat(e.clientX, e.clientY, "+1🥖");
-        checkVictory();
-    }
-
-    function createFloat(x, y, text) {
-        const el = document.createElement('div');
-        el.className = 'float-text';
-        el.innerText = text;
-        el.style.left = x + 'px'; el.style.top = y + 'px';
-        document.body.appendChild(el);
-        setTimeout(() => el.remove(), 800);
-    }
-
-    function feedDuck() {
-        if(player.seeds > 0) {
-            player.seeds--;
-            player.atk += 1;
-            player.lvl++;
-            alert("Nom nom! Your Duck grew stronger!");
-            updateUI();
-        } else {
-            alert("No seeds left! Buy some at the Shop.");
-        }
-    }
-
-    function buyItem(type, cost) {
-        if(player.bread >= cost) {
-            player.bread -= cost;
-            if(type === 'seeds') player.seeds++;
-            if(type === 'auto') player.autos++;
-            updateUI();
-        } else { alert("Not enough bread!"); }
-    }
-
-    function checkVictory() {
-        if(enemy && enemy.hp <= 0) {
-            player.bread += 30;
-            enemy = null;
-            document.getElementById('battle-screen').style.display = 'none';
-        }
+        if(enemy.hp <= 0) { player.bread += 50; run(); }
         updateUI();
     }
 
     function updateUI() {
         document.querySelectorAll('.bread-val').forEach(el => el.innerText = player.bread);
-        document.getElementById('food-count').innerText = player.seeds;
-        document.getElementById('p-food').innerText = player.seeds;
-        document.getElementById('p-atk').innerText = player.atk;
+        document.getElementById('step-count').innerText = player.steps;
         document.getElementById('p-lvl').innerText = player.lvl;
         if(enemy) document.getElementById('e-hp').style.width = enemy.hp + '%';
+        
+        const eggDisp = document.getElementById('egg-display');
+        if(player.egg) {
+            eggDisp.innerHTML = `<div class="pixel-egg"></div><p>Hatching in: ${player.egg.target - player.steps} steps</p>`;
+        } else {
+            eggDisp.innerHTML = `<p>No eggs. Visit the shop!</p>`;
+        }
     }
 
     function toggleScreen(id) {
         const s = document.getElementById(id);
         s.style.display = (s.style.display === 'flex') ? 'none' : 'flex';
-        updateUI();
     }
 
-    function run() { enemy = null; document.getElementById('battle-screen').style.display = 'none'; }
+    function run() { enemy = null; document.getElementById('battle-screen').style.display = 'none'; updateUI(); }
 </script>
 </body>
 </html>
