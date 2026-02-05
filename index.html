@@ -3,97 +3,82 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Duckémon: RPG Evolution</title>
+    <title>Duckémon: Team Master</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
-        :root { --grass: #91d18b; --water: #4cc9f0; --fire: #e63946; --panel: #f1f2f6; --gold: #ffd700; }
+        :root { 
+            --grass: #91d18b; --water: #4cc9f0; --fire: #e63946; --void: #9d4edd; 
+            --panel: #f1f2f6; --gold: #ffd700; 
+        }
         body { margin: 0; background: #222; font-family: 'Press Start 2P', cursive; color: #333; display: flex; flex-direction: column; align-items: center; overflow: hidden; }
 
-        /* --- THE DUCK SPRITE ENGINE --- */
+        /* --- THE DUCK SPRITE --- */
         .duck {
             position: relative; width: 40px; height: 35px;
             background: var(--c, #ffcc00); border-radius: 20px 20px 10px 10px;
             box-shadow: inset -4px -4px 0 rgba(0,0,0,0.1);
-            transition: all 0.3s ease;
         }
-        .duck::before { content: ''; position: absolute; width: 15px; height: 10px; background: #fb8500; right: -8px; top: 12px; border-radius: 0 10px 10px 0; }
-        .duck::after { content: ''; position: absolute; width: 5px; height: 5px; background: #000; right: 8px; top: 8px; border-radius: 50%; }
-        .wing { position: absolute; width: 20px; height: 12px; background: rgba(0,0,0,0.1); left: 5px; top: 15px; border-radius: 10px; }
-        
-        /* Evolution Accessory */
-        .crown { display: none; position: absolute; top: -15px; left: 10px; font-size: 15px; }
-        .evolved .crown { display: block; }
-        .evolved { transform: scale(1.3); }
+        .duck::before { content: ''; position: absolute; width: 12px; height: 8px; background: #fb8500; right: -6px; top: 12px; border-radius: 0 10px 10px 0; }
+        .duck::after { content: ''; position: absolute; width: 4px; height: 4px; background: #000; right: 8px; top: 8px; border-radius: 50%; }
+        .wing { position: absolute; width: 18px; height: 10px; background: rgba(0,0,0,0.1); left: 5px; top: 15px; border-radius: 10px; }
 
-        /* --- WORLD & BATTLE --- */
-        #viewport { width: 360px; height: 360px; border: 8px solid #444; position: relative; overflow: hidden; background: var(--grass); margin-top: 10px; }
-        
-        #battle-overlay {
+        /* --- SCREENS --- */
+        #viewport { width: 360px; height: 320px; border: 8px solid #444; position: relative; overflow: hidden; background: var(--grass); margin-top: 10px; }
+        #battle-screen {
             display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: #fff; z-index: 100; flex-direction: column; align-items: center; justify-content: space-around;
-            animation: flash 0.2s 3;
         }
-        @keyframes flash { 0%, 100% { background: #fff; } 50% { background: #000; } }
+        #party-menu { display: none; position: absolute; top: 5%; left: 5%; width: 90%; height: 90%; background: var(--panel); border: 4px solid #333; z-index: 50; padding: 10px; box-sizing: border-box; font-size: 8px; }
 
-        /* --- STATS & UI --- */
-        #stats-menu { display: none; position: absolute; top: 10%; left: 10%; width: 80%; height: 80%; background: var(--panel); border: 4px solid #333; z-index: 50; padding: 15px; box-sizing: border-box; font-size: 8px; line-height: 2; }
-        #hud { width: 376px; background: #333; color: white; padding: 15px; box-sizing: border-box; }
-        .controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 10px; }
-        
-        .btn { background: #eee; border: none; border-bottom: 4px solid #999; padding: 10px; font-family: inherit; font-size: 8px; cursor: pointer; }
+        /* --- UI --- */
+        #hud { width: 376px; background: #333; color: white; padding: 10px; box-sizing: border-box; }
+        .controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 8px; }
+        .btn { background: #eee; border: none; border-bottom: 4px solid #999; padding: 8px; font-family: inherit; font-size: 7px; cursor: pointer; }
         .btn:active { transform: translateY(2px); border-bottom-width: 2px; }
-        
-        .hp-bar { width: 150px; height: 12px; background: #eee; border: 2px solid #000; margin-top: 5px; }
+        .hp-bar { width: 120px; height: 10px; background: #ddd; border: 2px solid #000; margin: 4px 0; }
         .hp-fill { height: 100%; background: #2ecc71; width: 100%; transition: 0.3s; }
+        .party-slot { border: 2px solid #ccc; margin: 5px 0; padding: 5px; display: flex; align-items: center; gap: 10px; }
     </style>
 </head>
 <body onload="init()">
 
     <div id="viewport">
         <div id="player" style="position: absolute; transition: 0.1s linear; z-index: 10;">
-            <div id="player-duck" class="duck">
-                <div class="crown">👑</div>
-                <div class="wing"></div>
+            <div id="p-sprite" class="duck"><div class="wing"></div></div>
+        </div>
+
+        <div id="battle-screen">
+            <div id="e-info">
+                <span id="e-name">WILD</span> LV:<span id="e-lvl">1</span>
+                <div class="hp-bar"><div id="e-hp-fill" class="hp-fill"></div></div>
+            </div>
+            <div id="e-sprite-cont"></div>
+            <div id="p-info">
+                <span id="p-active-name">PUDDLES</span>
+                <div class="hp-bar"><div id="p-hp-fill" class="hp-fill"></div></div>
+            </div>
+            <div style="display:flex; gap:5px; width:90%">
+                <button class="btn" style="flex:1; background:#ff4757; color:white;" onclick="fight()">ATTACK</button>
+                <button class="btn" style="flex:1; background:#4cc9f0;" onclick="catchDuck()">CATCH</button>
             </div>
         </div>
 
-        <div id="battle-overlay">
-            <div style="text-align: right; width: 80%;">
-                <span id="enemy-name">WILD DUCK</span> LV:<span id="enemy-lvl">1</span>
-                <div class="hp-bar"><div id="enemy-hp" class="hp-fill"></div></div>
-            </div>
-
-            <div id="enemy-sprite"></div>
-
-            <div style="text-align: left; width: 80%;">
-                <span id="p-display-name">PUDDLES</span>
-                <div class="hp-bar"><div id="p-hp-bar" class="hp-fill"></div></div>
-            </div>
-
-            <button class="btn" style="width: 80%; background: #ff4757; color: white;" onclick="playerAttack()">BATTLE TACKLE</button>
-        </div>
-
-        <div id="stats-menu">
-            <h3 style="text-align:center">DUCK DATA</h3>
-            <hr>
-            <p>NAME: <span id="s-name">PUDDLES</span></p>
-            <p>RANK: <span id="s-rank">ROOKIE</span></p>
-            <p>LEVEL: <span id="s-lvl">1</span></p>
-            <p>XP: <span id="s-xp">0</span> / 100</p>
-            <p>BREAD: <span id="s-bread">0</span></p>
-            <button class="btn" style="width:100%" onclick="toggleStats()">BACK</button>
+        <div id="party-menu">
+            <h3 style="text-align:center">YOUR TEAM</h3>
+            <div id="party-list"></div>
+            <button class="btn" style="width:100%; margin-top:10px;" onclick="toggleParty()">CLOSE</button>
         </div>
     </div>
 
     <div id="hud">
-        <div style="font-size: 8px; display: flex; justify-content: space-between;">
-            <span>ZONE: <span id="loc">FIELD</span></span>
-            <span>LVL: <span id="hud-lvl">1</span></span>
+        <div style="font-size: 7px; display: flex; justify-content: space-between;">
+            <span>TEAM: <span id="team-count">1</span>/3</span>
+            <span>BREAD: <span id="bread">0</span></span>
         </div>
         <div class="controls">
-            <button class="btn" onclick="toggleStats()">STATS</button>
+            <button class="btn" onclick="toggleParty()">TEAM</button>
             <button class="btn" onclick="move(0, -30)">UP</button>
-            <button class="btn" onclick="heal()">HEAL (10🥖)</button>
+            <button class="btn" onclick="heal()">HEAL (15🥖)</button>
             <button class="btn" onclick="move(-30, 0)">LEFT</button>
             <button class="btn" onclick="move(0, 30)">DOWN</button>
             <button class="btn" onclick="move(30, 0)">RIGHT</button>
@@ -102,118 +87,97 @@
 
     <script>
         let pPos = { x: 150, y: 150 };
-        let duck = { name: "PUDDLES", lvl: 1, xp: 0, bread: 0, hp: 100, maxHp: 100, evolved: false };
-        let enemy = { name: "", lvl: 1, hp: 100 };
+        let bread = 0;
+        let party = [{ name: "PUDDLES", lvl: 1, hp: 100, type: "HYDRO", color: "#4cc9f0" }];
+        let activeIdx = 0;
+        let enemy = null;
 
-        const wildNames = ["QUACKER", "WEBFOOT", "BILLY", "DIVE-MASTER", "HONKER", "PADDLE-BOT"];
+        const types = [
+            { name: "HYDRO", color: "#4cc9f0" },
+            { name: "PYRO", color: "#e63946" },
+            { name: "LEAF", color: "#91d18b" },
+            { name: "VOID", color: "#9d4edd" }
+        ];
 
-        function init() { updatePlayer(); updateUI(); }
+        function init() { updateUI(); }
 
         function move(dx, dy) {
-            if (document.getElementById('battle-overlay').style.display === 'flex') return;
+            if (document.getElementById('battle-screen').style.display === 'flex') return;
             pPos.x = Math.max(0, Math.min(320, pPos.x + dx));
-            pPos.y = Math.max(0, Math.min(320, pPos.y + dy));
-            updatePlayer();
-
-            // Biome Change
-            if (pPos.x > 180) {
-                document.getElementById('viewport').style.background = "var(--fire)";
-                document.getElementById('loc').innerText = "VOLCANO";
-            } else {
-                document.getElementById('viewport').style.background = "var(--grass)";
-                document.getElementById('loc').innerText = "FIELD";
-            }
-
-            if (Math.random() < 0.2) startBattle();
-        }
-
-        function updatePlayer() {
+            pPos.y = Math.max(0, Math.min(280, pPos.y + dy));
             const p = document.getElementById('player');
-            p.style.left = pPos.x + 'px';
-            p.style.top = pPos.y + 'px';
-            
-            if (duck.lvl >= 10 && !duck.evolved) {
-                duck.evolved = true;
-                duck.name = "KING QUACK";
-                document.getElementById('player-duck').classList.add('evolved');
-                alert("WHAT?! Your duck is evolving into " + duck.name + "!");
-            }
+            p.style.left = pPos.x + 'px'; p.style.top = pPos.y + 'px';
+
+            if (Math.random() < 0.15) startBattle();
         }
 
         function startBattle() {
-            const overlay = document.getElementById('battle-overlay');
-            overlay.style.display = 'flex';
+            document.getElementById('battle-screen').style.display = 'flex';
+            const type = types[Math.floor(Math.random() * types.length)];
+            enemy = { name: type.name + "-DUCK", lvl: party[activeIdx].lvl, hp: 100, type: type.name, color: type.color };
             
-            // Random Enemy Gen
-            enemy.lvl = Math.max(1, duck.lvl + (Math.floor(Math.random() * 3) - 1));
-            enemy.name = wildNames[Math.floor(Math.random() * wildNames.length)];
-            enemy.hp = 100;
-
-            document.getElementById('enemy-name').innerText = enemy.name;
-            document.getElementById('enemy-lvl').innerText = enemy.lvl;
-            document.getElementById('enemy-sprite').innerHTML = `<div class="duck" style="--c: #555; transform: scale(2) scaleX(-1);"></div>`;
-            updateHP();
+            document.getElementById('e-name').innerText = enemy.name;
+            document.getElementById('e-lvl').innerText = enemy.lvl;
+            document.getElementById('e-sprite-cont').innerHTML = `<div class="duck" style="--c:${enemy.color}; transform:scale(1.8) scaleX(-1);"></div>`;
+            updateBattleBars();
         }
 
-        function playerAttack() {
-            let dmg = 20 + (duck.lvl * 5);
-            enemy.hp -= dmg;
-            updateHP();
-
+        function fight() {
+            enemy.hp -= 35;
             if (enemy.hp <= 0) {
-                winBattle();
+                alert("Enemy defeated! Gained bread.");
+                bread += 20;
+                party[activeIdx].lvl++;
+                endBattle();
             } else {
-                // Simple AI Counter-attack
-                setTimeout(() => {
-                    duck.hp -= 10;
-                    updateHP();
-                    if(duck.hp <= 0) { alert("You fainted! Returned to start."); location.reload(); }
-                }, 500);
+                party[activeIdx].hp -= 15;
+                if (party[activeIdx].hp <= 0) { alert("Active duck fainted!"); endBattle(); }
             }
+            updateBattleBars();
         }
 
-        function winBattle() {
-            let xpGain = 40 + (enemy.lvl * 10);
-            duck.xp += xpGain;
-            duck.bread += 15;
-            if (duck.xp >= 100) {
-                duck.lvl++;
-                duck.xp = 0;
-                alert("Level Up! Level " + duck.lvl);
-            }
-            document.getElementById('battle-overlay').style.display = 'none';
-            updateUI();
+        function catchDuck() {
+            if (party.length >= 3) { alert("Team full!"); return; }
+            if (Math.random() > 0.5) {
+                party.push({...enemy, hp: 100});
+                alert("Gotcha! " + enemy.name + " joined the team!");
+                endBattle();
+            } else { alert("It broke free!"); }
         }
+
+        function endBattle() { 
+            document.getElementById('battle-screen').style.display = 'none'; 
+            updateUI(); 
+        }
+
+        function updateBattleBars() {
+            document.getElementById('e-hp-fill').style.width = enemy.hp + '%';
+            document.getElementById('p-hp-fill').style.width = party[activeIdx].hp + '%';
+            document.getElementById('p-active-name').innerText = party[activeIdx].name;
+        }
+
+        function toggleParty() {
+            const m = document.getElementById('party-menu');
+            m.style.display = m.style.display === 'block' ? 'none' : 'block';
+            const list = document.getElementById('party-list');
+            list.innerHTML = party.map((d, i) => `
+                <div class="party-slot" onclick="selectDuck(${i})">
+                    <div class="duck" style="--c:${d.color}; transform:scale(0.8)"></div>
+                    <div>${d.name} (LV:${d.lvl})<br>TYPE: ${d.type}</div>
+                </div>
+            `).join('');
+        }
+
+        function selectDuck(i) { activeIdx = i; toggleParty(); updateUI(); }
 
         function heal() {
-            if (duck.bread >= 10) {
-                duck.bread -= 10;
-                duck.hp = 100;
-                updateUI();
-                alert("Duck healed!");
-            }
-        }
-
-        function toggleStats() {
-            const m = document.getElementById('stats-menu');
-            m.style.display = m.style.display === 'block' ? 'none' : 'block';
-            updateUI();
-        }
-
-        function updateHP() {
-            document.getElementById('enemy-hp').style.width = enemy.hp + '%';
-            document.getElementById('p-hp-bar').style.width = duck.hp + '%';
+            if (bread >= 15) { bread -= 15; party.forEach(d => d.hp = 100); updateUI(); alert("All ducks healed!"); }
         }
 
         function updateUI() {
-            document.getElementById('s-name').innerText = duck.name;
-            document.getElementById('p-display-name').innerText = duck.name;
-            document.getElementById('s-lvl').innerText = duck.lvl;
-            document.getElementById('hud-lvl').innerText = duck.lvl;
-            document.getElementById('s-xp').innerText = duck.xp;
-            document.getElementById('s-bread').innerText = duck.bread;
-            document.getElementById('s-rank').innerText = duck.lvl >= 10 ? "ROYAL DUCK" : "ROOKIE";
-            updatePlayer();
+            document.getElementById('team-count').innerText = party.length;
+            document.getElementById('bread').innerText = bread;
+            document.getElementById('p-sprite').style.setProperty('--c', party[activeIdx].color);
         }
     </script>
 </body>
