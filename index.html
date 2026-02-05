@@ -2,193 +2,174 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Duckémon: Cute & Cool</title>
+    <title>Duckémon: Clicker Evolution</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
-        :root { 
-            --grass: #7cfc00; --water: #00bfff; --sand: #f0e68c; --cyber: #2f4f4f;
-            --p-cute: #ffb6c1; --p-cool: #ffd700;
-        }
-        
+        :root { --grass: #7cfc00; --water: #00bfff; --sand: #f0e68c; --p-cool: #ffd700; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #111; font-family: 'Press Start 2P', cursive; color: #fff; overflow: hidden; image-rendering: pixelated; }
 
-        /* --- THE INFINITE OVERWORLD --- */
+        /* --- WORLD --- */
         #viewport { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
         #world { position: absolute; transition: transform 0.1s linear; }
-        
-        .tile { width: 60px; height: 60px; position: absolute; }
-        .t-0 { background: var(--grass); box-shadow: inset 4px 4px 0 #64cd00; }
-        .t-1 { background: var(--water); box-shadow: inset 0 4px 0 #1e90ff; }
-        .t-2 { background: var(--sand); }
-        .t-3 { background: var(--cyber); box-shadow: inset 0 0 15px #00ff00; }
+        .tile { width: 60px; height: 60px; position: absolute; box-shadow: inset 2px 2px 0 rgba(255,255,255,0.1); }
+        .t-0 { background: var(--grass); } .t-1 { background: var(--water); }
 
-        /* --- CUTE & COOL PIXEL ART --- */
+        /* --- CUTE DUCK --- */
         .pixel-duck {
             width: 4px; height: 4px; background: transparent;
-            /* Tiny 8x8 design: Body, Beak, Eye, and Blush/Hat */
-            box-shadow: 
-                8px 4px 0 var(--c), 12px 4px 0 var(--c), 16px 4px 0 var(--c),
-                8px 8px 0 var(--c), 12px 8px 0 var(--c), 16px 8px 0 var(--c), 20px 8px 0 #ff8c00,
-                4px 12px 0 var(--c), 8px 12px 0 var(--c), 12px 12px 0 var(--c), 16px 12px 0 var(--c),
-                16px 4px 0 #000, /* Eye */
-                12px 8px 0 #ff69b4; /* Cute Blush */
-            position: absolute; transform: scale(3); transition: 0.2s;
-        }
-
-        .cool-hat::after {
-            content: ''; position: absolute; width: 12px; height: 4px; 
-            background: #333; top: 0; left: 8px; border-bottom: 2px solid #000;
+            box-shadow: 8px 4px 0 var(--c), 12px 4px 0 var(--c), 16px 4px 0 var(--c), 8px 8px 0 var(--c), 12px 8px 0 var(--c), 16px 8px 0 var(--c), 20px 8px 0 #ff8c00, 4px 12px 0 var(--c), 8px 12px 0 var(--c), 12px 12px 0 var(--c), 16px 12px 0 var(--c), 16px 4px 0 #000, 12px 8px 0 #ff69b4;
+            position: absolute; transform: scale(3);
         }
 
         #player-container { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 100; }
 
-        /* --- BATTLE SCREEN --- */
+        /* --- BATTLE & CLICKER --- */
         .screen { display: none; position: absolute; inset: 0; z-index: 2000; background: #fff; color: #000; flex-direction: column; align-items: center; justify-content: center; }
-        .stats-panel { background: #f0f0f0; border: 4px solid #000; padding: 15px; width: 250px; margin: 10px; }
-        .hp-bar { width: 100%; height: 10px; background: #ccc; border: 2px solid #000; margin-top: 5px; }
-        .hp-fill { height: 100%; background: #00ff00; width: 100%; transition: 0.3s; }
+        #e-sprite-battle { cursor: crosshair; transition: transform 0.05s; }
+        #e-sprite-battle:active { transform: scale(9.5) scaleX(-1); } /* Visual click feedback */
 
-        /* --- HUD --- */
-        #hud { position: absolute; bottom: 0; width: 100%; background: rgba(0,0,0,0.8); padding: 20px; display: flex; justify-content: space-between; font-size: 10px; z-index: 500; }
-        .btn { font-family: 'Press Start 2P'; padding: 10px; border: 4px solid #000; background: #fff; cursor: pointer; font-size: 10px; }
+        /* --- HUD & MENUS --- */
+        #hud { position: absolute; bottom: 0; width: 100%; background: rgba(0,0,0,0.9); padding: 15px; display: flex; justify-content: space-around; font-size: 8px; z-index: 500; border-top: 3px solid #ffd700; }
+        .btn { font-family: 'Press Start 2P'; padding: 10px; border: 4px solid #000; background: #fff; cursor: pointer; font-size: 8px; margin: 5px; }
+        .upgrade-ui { display: none; position: absolute; top: 20%; left: 30%; width: 40%; background: #222; border: 4px solid #fff; padding: 20px; z-index: 3000; }
     </style>
 </head>
 <body onload="init()">
 
 <div id="viewport">
     <div id="world"></div>
-    <div id="player-container">
-        <div id="p-sprite" class="pixel-duck cool-hat" style="--c:var(--p-cool)"></div>
-    </div>
+    <div id="player-container"><div id="p-sprite" class="pixel-duck" style="--c:var(--p-cool)"></div></div>
 
     <div id="battle-screen" class="screen">
-        <h2 id="b-title">WILD ENCOUNTER!</h2>
-        <div style="display:flex; justify-content:space-around; width:100%; align-items: flex-end;">
-            <div class="stats-panel">
-                <div>YOU [LV <span id="p-lvl-b">1</span>]</div>
-                <div class="hp-bar"><div id="p-hp" class="hp-fill"></div></div>
-            </div>
-            <div id="e-sprite-battle" class="pixel-duck" style="position:relative; transform:scale(10) scaleX(-1);"></div>
-            <div class="stats-panel">
-                <div id="e-name-b">WILD DUCK</div>
-                <div class="hp-bar"><div id="e-hp" class="hp-fill"></div></div>
-            </div>
+        <h2 id="click-hint">CLICK ENEMY TO HELP!</h2>
+        <div style="display:flex; justify-content:space-around; width:100%; align-items: center;">
+            <div id="p-sprite-battle" class="pixel-duck" style="--c:var(--p-cool); position:relative; transform:scale(8);"></div>
+            <div id="e-sprite-battle" class="pixel-duck" onclick="clickDamage()" style="position:relative; transform:scale(10) scaleX(-1);"></div>
         </div>
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-top: 40px;">
-            <button class="btn" onclick="fight()">FIGHT</button>
+        <div style="text-align:center; width: 300px;">
+            ENEMY HP: <div style="width:100%; height:15px; background:#ccc; border:2px solid #000;"><div id="e-hp" style="height:100%; background:red; width:100%;"></div></div>
+        </div>
+        <div style="margin-top:20px;">
             <button class="btn" onclick="catchDuck()">CATCH</button>
             <button class="btn" onclick="run()">RUN</button>
         </div>
     </div>
 
+    <div id="upgrade-menu" class="upgrade-ui">
+        <h3>DUCK UPGRADES</h3>
+        <p>QUACK POWER: <span id="qp-display">0</span></p>
+        <button class="btn" onclick="upgrade('dmg')">ATK Lvl <span id="atk-lvl">1</span> (50 QP)</button>
+        <button class="btn" onclick="upgrade('spd')">SPD Lvl <span id="spd-lvl">1</span> (50 QP)</button>
+        <button class="btn" onclick="toggleMenu('upgrade-menu')">CLOSE</button>
+    </div>
+
     <div id="hud">
-        <div>DUCKÉDEX: <span id="dex">0</span>/5</div>
-        <div>LVL: <span id="lvl">1</span></div>
+        <div>TEAM: <span id="party-count">1</span></div>
+        <div>QUACK POWER: <span id="qp-hud">0</span></div>
+        <button class="btn" onclick="toggleMenu('upgrade-menu')">UPGRADES</button>
         <div>COORD: <span id="coords">0,0</span></div>
     </div>
 </div>
 
 <script>
     let pos = { x: 0, y: 0 };
-    let player = { lvl: 1, hp: 100, caught: [] };
+    let player = { qp: 0, atk: 1, spd: 1, caught: ["Goldy"] };
     let enemy = null;
     let rendered = {};
-    const step = 60;
-
-    const ENEMY_TYPES = [
-        { name: "Neon-Duck", color: "#39ff14", hat: true },
-        { name: "Goth-Duck", color: "#4b0082", hat: false },
-        { name: "Flame-Duck", color: "#ff4500", hat: true },
-        { name: "Frost-Duck", color: "#00ffff", hat: false },
-        { name: "Posh-Duck", color: "#ff1493", hat: true }
-    ];
 
     function init() {
         renderMap();
         window.addEventListener('keydown', (e) => {
-            if(document.getElementById('battle-screen').style.display === 'flex') return;
+            if(document.querySelector('.screen').style.display === 'flex') return;
             const k = e.key.toLowerCase();
-            if(k === 'w') pos.y += step;
-            if(k === 's') pos.y -= step;
-            if(k === 'a') pos.x -= step;
-            if(k === 'd') pos.x += step;
+            const moveAmt = 60;
+            if(k === 'w') pos.y += moveAmt;
+            if(k === 's') pos.y -= moveAmt;
+            if(k === 'a') pos.x -= moveAmt;
+            if(k === 'd') pos.x += moveAmt;
             renderMap();
-            if(Math.random() < 0.07) startBattle();
+            if(Math.random() < 0.08) startBattle();
         });
     }
 
     function renderMap() {
         const world = document.getElementById('world');
-        const r = 10;
-        for (let i = -r; i < r; i++) {
-            for (let j = -r; j < r; j++) {
-                let tx = Math.floor(pos.x / step) + i;
-                let ty = Math.floor(pos.y / step) + j;
+        for (let i = -8; i < 8; i++) {
+            for (let j = -8; j < 8; j++) {
+                let tx = Math.floor(pos.x / 60) + i;
+                let ty = Math.floor(pos.y / 60) + j;
                 let key = `${tx},${ty}`;
                 if (!rendered[key]) {
                     const t = document.createElement('div');
-                    let zone = (Math.abs(tx) > 20) ? 3 : (ty < -10) ? 1 : (tx > 10) ? 2 : 0;
-                    t.className = `tile t-${zone}`;
-                    t.style.left = tx * step + 'px';
-                    t.style.top = -ty * step + 'px';
+                    t.className = `tile t-${Math.abs(tx+ty)%2}`;
+                    t.style.left = tx * 60 + 'px';
+                    t.style.top = -ty * 60 + 'px';
                     world.appendChild(t);
                     rendered[key] = true;
                 }
             }
         }
         world.style.transform = `translate(${-pos.x + (window.innerWidth/2)}px, ${pos.y + (window.innerHeight/2)}px)`;
-        document.getElementById('coords').innerText = `${Math.floor(pos.x/step)},${Math.floor(pos.y/step)}`;
+        document.getElementById('coords').innerText = `${Math.floor(pos.x/60)},${Math.floor(pos.y/60)}`;
     }
 
     function startBattle() {
-        const screen = document.getElementById('battle-screen');
-        screen.style.display = 'flex';
-        enemy = { ...ENEMY_TYPES[Math.floor(Math.random()*ENEMY_TYPES.length)], hp: 100 };
-        
-        document.getElementById('e-name-b').innerText = enemy.name.toUpperCase();
-        const eSprite = document.getElementById('e-sprite-battle');
-        eSprite.style.setProperty('--c', enemy.color);
-        eSprite.className = enemy.hat ? "pixel-duck cool-hat" : "pixel-duck";
-        
-        document.getElementById('p-lvl-b').innerText = player.lvl;
-        player.hp = 100;
-        updateBars();
+        document.getElementById('battle-screen').style.display = 'flex';
+        enemy = { hp: 100, color: '#'+(Math.random()*0xFFFFFF<<0).toString(16) };
+        document.getElementById('e-sprite-battle').style.setProperty('--c', enemy.color);
+        updateUI();
     }
 
-    function fight() {
-        enemy.hp -= 35;
+    // CLICKER MECHANIC
+    function clickDamage() {
+        if(!enemy) return;
+        enemy.hp -= (1 + player.atk);
+        player.qp += 1;
+        checkWin();
+        updateUI();
+    }
+
+    function checkWin() {
         if(enemy.hp <= 0) {
-            alert("Wild " + enemy.name + " fainted!");
-            player.lvl++;
+            alert("Victory! Gained Quack Power!");
+            player.qp += 50;
             run();
-        } else {
-            player.hp -= 20;
-            if(player.hp <= 0) { alert("You whited out!"); location.reload(); }
         }
-        updateBars();
+    }
+
+    function upgrade(type) {
+        if(player.qp >= 50) {
+            player.qp -= 50;
+            if(type === 'dmg') player.atk++;
+            if(type === 'spd') player.spd++;
+            updateUI();
+        }
     }
 
     function catchDuck() {
-        if(Math.random() > (enemy.hp / 100)) {
-            alert("Gotcha! " + enemy.name + " was caught!");
-            if(!player.caught.includes(enemy.name)) player.caught.push(enemy.name);
+        if(Math.random() > 0.5) {
+            alert("Caught!");
+            player.caught.push("New Duck");
             run();
-        } else {
-            alert("Oh no! It broke free!");
-            player.hp -= 10;
-            updateBars();
-        }
+        } else { alert("Escaped!"); }
     }
 
-    function updateBars() {
-        document.getElementById('e-hp').style.width = enemy.hp + '%';
-        document.getElementById('p-hp').style.width = player.hp + '%';
-        document.getElementById('lvl').innerText = player.lvl;
-        document.getElementById('dex').innerText = player.caught.length;
+    function updateUI() {
+        if(enemy) document.getElementById('e-hp').style.width = enemy.hp + '%';
+        document.getElementById('qp-hud').innerText = player.qp;
+        document.getElementById('qp-display').innerText = player.qp;
+        document.getElementById('atk-lvl').innerText = player.atk;
+        document.getElementById('spd-lvl').innerText = player.spd;
+        document.getElementById('party-count').innerText = player.caught.length;
     }
 
-    function run() { document.getElementById('battle-screen').style.display = 'none'; }
+    function toggleMenu(id) {
+        const m = document.getElementById(id);
+        m.style.display = m.style.display === 'block' ? 'none' : 'block';
+        updateUI();
+    }
+
+    function run() { document.getElementById('battle-screen').style.display = 'none'; enemy = null; updateUI(); }
 </script>
 </body>
 </html>
