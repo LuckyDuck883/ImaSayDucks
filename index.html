@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Duckémon: Trainer Circuit</title>
+    <title>Duckémon: Center & City</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         :root { 
-            --grass: #55aa55; --water: #4488ff; --sand: #eedd88; --lava: #ff4400;
-            --hydro: #4cc9f0; --pyro: #e63946; --leaf: #91d18b; --bolt: #ffea00;
-            --void: #7b2cbf; --npc: #576574;
+            --grass: #55aa55; --water: #4488ff; --wall: #ecf0f1; --roof: #e74c3c;
+            --hydro: #4cc9f0; --npc: #576574;
         }
         body { margin: 0; background: #111; font-family: 'Press Start 2P', cursive; display: flex; flex-direction: column; align-items: center; color: #fff; overflow: hidden; }
 
@@ -20,168 +19,148 @@
         .tile { width: 40px; height: 40px; }
         .t-grass { background: var(--grass); }
         .t-water { background: var(--water); }
-        .t-sand { background: var(--sand); }
+
+        /* --- BUILDINGS --- */
+        #duck-center { 
+            position: absolute; width: 120px; height: 100px; 
+            background: var(--wall); border: 4px solid #000; z-index: 4;
+        }
+        .roof { position: absolute; top: -30px; left: -4px; width: 120px; height: 30px; background: var(--roof); border: 4px solid #000; }
+        .door { position: absolute; bottom: 0; left: 45px; width: 30px; height: 30px; background: #34495e; border-top: 4px solid #000; }
+
+        /* --- INTERIOR --- */
+        #interior { 
+            display: none; position: absolute; inset: 0; background: #bdc3c7; z-index: 400; 
+            flex-direction: column; align-items: center; justify-content: center; color: #000;
+        }
 
         /* --- SPRITES --- */
         .sprite { width: 32px; height: 32px; position: absolute; z-index: 5; }
         #player { left: 184px; top: 184px; z-index: 10; }
-        .npc { background: var(--npc); border-radius: 5px; border: 2px solid #fff; }
-        
         .duck { 
             width: 32px; height: 28px; background: var(--c, #ff0); border-radius: 12px 12px 5px 5px; position: relative;
             border: 2px solid #000;
         }
         .duck::before { content: ''; position: absolute; width: 8px; height: 5px; background: #f80; right: -6px; top: 10px; border-radius: 0 5px 5px 0; border: 1px solid #000; }
 
-        /* --- DIALOGUE & BATTLE --- */
-        #dialogue-box { 
-            display: none; position: absolute; bottom: 10px; left: 10px; right: 10px; 
-            background: #fff; color: #000; border: 4px solid #000; padding: 10px; font-size: 8px; z-index: 200; 
-        }
-        #battle-screen { 
-            display: none; position: absolute; inset: 0; background: #fff; z-index: 300; color: #000; 
-            flex-direction: column; align-items: center; justify-content: space-around; padding: 20px; 
-        }
-        .hp-bar { width: 100%; height: 12px; background: #ccc; border: 2px solid #000; margin-top: 5px; }
+        #battle-screen { display: none; position: absolute; inset: 0; background: #fff; z-index: 500; color: #000; flex-direction: column; align-items: center; justify-content: space-around; padding: 20px; }
+        .hp-bar { width: 100%; height: 12px; background: #ccc; border: 2px solid #000; }
         .hp-fill { height: 100%; background: #2ecc71; width: 100%; transition: 0.3s; }
 
-        /* --- HUD --- */
         #hud { width: 420px; background: #222; padding: 15px; box-sizing: border-box; font-size: 8px; }
-        .btn { font-family: inherit; font-size: 8px; padding: 10px; cursor: pointer; background: #eee; border: 2px solid #000; }
+        .btn { font-family: inherit; font-size: 8px; padding: 10px; cursor: pointer; }
     </style>
 </head>
 <body onload="init()">
 
 <div id="game-container">
     <div id="map"></div>
+    
+    <div id="duck-center" style="left: 500px; top: 500px;">
+        <div class="roof"></div>
+        <div class="door"></div>
+        <div style="color:#000; font-size:10px; text-align:center; margin-top:10px;">CENTER</div>
+    </div>
+
     <div id="player" class="sprite"><div id="p-sprite" class="duck" style="--c:#ff0"></div></div>
     
-    <div id="npc-layer"></div>
-
-    <div id="dialogue-box"></div>
+    <div id="interior">
+        <div class="duck" style="--c:#ff7675; transform:scale(2)"></div>
+        <p>Welcome to the Duck Center!</p>
+        <p>Resting your team...</p>
+        <button class="btn" onclick="leaveCenter()">EXIT</button>
+    </div>
 
     <div id="battle-screen">
-        <h2 id="battle-type">TRAINER BATTLE</h2>
-        <div style="width:80%">
-            <div id="e-name">RIVAL DUCK</div>
-            <div class="hp-bar"><div id="e-hp" class="hp-fill"></div></div>
-        </div>
         <div id="e-sprite" style="transform: scale(3) scaleX(-1);"></div>
-        <div style="width:80%">
-            <div id="p-name">YOUR DUCK</div>
-            <div class="hp-bar"><div id="p-hp" class="hp-fill"></div></div>
-        </div>
+        <div class="hp-bar"><div id="e-hp" class="hp-fill"></div></div>
+        <div class="hp-bar"><div id="p-hp" class="hp-fill"></div></div>
         <button class="btn" onclick="attack()">QUACK ATTACK!</button>
     </div>
 </div>
 
 <div id="hud">
-    <div style="display:flex; justify-content:space-between;">
-        <span>LVL: <span id="lvl">1</span> | 🥖: <span id="bread">0</span></span>
-        <span>WASD TO MOVE</span>
-    </div>
+    <span>LVL: <span id="lvl">1</span> | 🥖: <span id="bread">0</span> | HP: <span id="hp-stat">100</span>%</span>
 </div>
 
 <script>
     let world = { x: -400, y: -400 };
     let player = { lvl: 1, hp: 100, bread: 0, color: '#4cc9f0' };
-    let npcs = [
-        { x: 600, y: 600, name: "QUACKER JOE", msg: "I've been training my duck in this pond for years! FIGHT ME!", defeated: false },
-        { x: 1000, y: 400, name: "ELITE BILLY", msg: "Only the strongest ducks can pass this path!", defeated: false }
-    ];
     let enemy = null;
-    let currentNPC = null;
 
     function init() {
         const mapDiv = document.getElementById('map');
         for(let i=0; i < 900; i++) {
             const tile = document.createElement('div');
-            tile.className = 'tile ' + (Math.random() > 0.8 ? 't-water' : 't-grass');
+            tile.className = 'tile ' + (Math.random() > 0.9 ? 't-water' : 't-grass');
             mapDiv.appendChild(tile);
         }
-        renderNPCs();
         window.addEventListener('keydown', handleKey);
         updateUI();
     }
 
-    function renderNPCs() {
-        const layer = document.getElementById('npc-layer');
-        layer.innerHTML = '';
-        npcs.forEach(npc => {
-            const div = document.createElement('div');
-            div.className = 'sprite npc';
-            div.style.left = (npc.x + world.x) + 'px';
-            div.style.top = (npc.y + world.y) + 'px';
-            layer.appendChild(div);
-        });
+    function handleKey(e) {
+        if(document.getElementById('battle-screen').style.display === 'flex' || 
+           document.getElementById('interior').style.display === 'flex') return;
+
+        const key = e.key.toLowerCase();
+        if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(key)) {
+            if(key === 'w' || key === 'arrowup') world.y += 40;
+            if(key === 's' || key === 'arrowdown') world.y -= 40;
+            if(key === 'a' || key === 'arrowleft') world.x += 40;
+            if(key === 'd' || key === 'arrowright') world.x -= 40;
+            
+            checkCollisions();
+            updateUI();
+        }
     }
 
-    function handleKey(e) {
-        if(document.getElementById('battle-screen').style.display === 'flex') return;
-        const key = e.key.toLowerCase();
-        let oldX = world.x; let oldY = world.y;
+    function checkCollisions() {
+        // Player absolute position
+        let px = 184 - world.x;
+        let py = 184 - world.y;
 
-        if(key === 'w' || key === 'arrowup') world.y += 40;
-        if(key === 's' || key === 'arrowdown') world.y -= 40;
-        if(key === 'a' || key === 'arrowleft') world.x += 40;
-        if(key === 'd' || key === 'arrowright') world.x -= 40;
+        // Check Duck Center Entrance (at 500, 500)
+        // Door is at 500+45, 500+70
+        if(px >= 540 && px <= 580 && py >= 570 && py <= 600) {
+            enterCenter();
+        }
 
-        // Check NPC Collision
-        npcs.forEach(npc => {
-            let px = 184 - world.x; let py = 184 - world.y;
-            let dist = Math.sqrt(Math.pow(px - npc.x, 2) + Math.pow(py - npc.y, 2));
-            if(dist < 40 && !npc.defeated) {
-                currentNPC = npc;
-                showDialogue(npc.name + ": " + npc.msg);
-                world.x = oldX; world.y = oldY; // Stop movement
-            }
-        });
+        // Random Battle in Grass
+        if(Math.random() < 0.05) startBattle();
+    }
 
+    function enterCenter() {
+        document.getElementById('interior').style.display = 'flex';
+        player.hp = 100; // Heal
         updateUI();
     }
 
-    function showDialogue(text) {
-        const box = document.getElementById('dialogue-box');
-        box.innerText = text + " (Press Space to Fight)";
-        box.style.display = 'block';
-        
-        const fightListener = (e) => {
-            if(e.code === "Space") {
-                box.style.display = 'none';
-                startBattle(true);
-                window.removeEventListener('keydown', fightListener);
-            }
-        };
-        window.addEventListener('keydown', fightListener);
+    function leaveCenter() {
+        document.getElementById('interior').style.display = 'none';
+        world.y -= 40; // Step away from door
+        updateUI();
     }
 
-    function startBattle(isTrainer) {
+    function startBattle() {
         document.getElementById('battle-screen').style.display = 'flex';
-        enemy = { 
-            name: isTrainer ? "TRAINER DUCK" : "WILD DUCK", 
-            hp: 100, 
-            lvl: isTrainer ? player.lvl + 2 : player.lvl, 
-            isTrainer: isTrainer 
-        };
-        document.getElementById('e-name').innerText = enemy.name;
-        document.getElementById('e-sprite').innerHTML = `<div class="duck" style="--c:${isTrainer ? '#576574' : '#ff4d4d'}"></div>`;
+        enemy = { hp: 100 };
+        document.getElementById('e-sprite').innerHTML = `<div class="duck" style="--c:#555"></div>`;
         updateBars();
     }
 
     function attack() {
-        enemy.hp -= 40;
+        enemy.hp -= 50;
         if(enemy.hp <= 0) {
-            player.bread += enemy.isTrainer ? 200 : 20;
             player.lvl++;
-            if(enemy.isTrainer) currentNPC.defeated = true;
-            alert("VICTORY! Gained bread and a level.");
+            player.bread += 20;
             document.getElementById('battle-screen').style.display = 'none';
         } else {
-            player.hp -= 10;
-            if(player.hp <= 0) { alert("Whited out!"); location.reload(); }
+            player.hp -= 20;
         }
         updateBars();
         updateUI();
+        if(player.hp <= 0) { alert("Fainted!"); location.reload(); }
     }
 
     function updateBars() {
@@ -191,12 +170,12 @@
 
     function updateUI() {
         document.getElementById('map').style.transform = `translate(${world.x}px, ${world.y}px)`;
+        document.getElementById('duck-center').style.transform = `translate(${world.x}px, ${world.y}px)`;
         document.getElementById('lvl').innerText = player.lvl;
         document.getElementById('bread').innerText = player.bread;
+        document.getElementById('hp-stat').innerText = player.hp;
         document.getElementById('p-sprite').style.setProperty('--c', player.color);
-        renderNPCs();
     }
 </script>
-
 </body>
 </html>
