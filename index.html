@@ -2,28 +2,28 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Duckémon: Automated Empire</title>
+    <title>Duckémon: Trainer's Edition</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         :root { 
             --grass: #5fb35f; --water: #4a90e2; --accent: #f1c40f; 
-            --panel: rgba(20, 20, 20, 0.95); --border: #ecf0f1;
+            --panel: rgba(15, 15, 20, 0.98); --border: #ecf0f1;
         }
         
         * { box-sizing: border-box; }
         body, html { 
             margin: 0; padding: 0; width: 100%; height: 100%; 
-            background: #111; font-family: 'Press Start 2P', cursive; 
+            background: #000; font-family: 'Press Start 2P', cursive; 
             color: #fff; overflow: hidden; image-rendering: pixelated; 
         }
 
-        /* --- THE WORLD CANVAS --- */
+        /* --- THE WORLD --- */
         #viewport { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
-        #world { position: absolute; transition: transform 0.15s ease-out; }
-        .tile { width: 64px; height: 64px; position: absolute; border: 1px solid rgba(255,255,255,0.03); }
+        #world { position: absolute; transition: transform 0.1s ease-out; }
+        .tile { width: 64px; height: 64px; position: absolute; border: 1px solid rgba(255,255,255,0.02); }
         .t-0 { background: var(--grass); } .t-1 { background: var(--water); }
 
-        /* --- NEAT DUCK DESIGN --- */
+        /* --- SPRITES --- */
         .pixel-duck {
             width: 4px; height: 4px; background: transparent;
             box-shadow: 
@@ -36,37 +36,42 @@
 
         #player-container { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 100; }
 
-        /* --- NEAT UI & SHOP --- */
+        /* --- UI SCREENS --- */
         .screen { 
             display: none; position: absolute; inset: 0; z-index: 2000; 
             background: var(--panel); flex-direction: column; align-items: center; justify-content: center;
-            backdrop-filter: blur(5px);
+            backdrop-filter: blur(8px);
         }
 
         .modal {
-            background: #2c3e50; border: 6px solid var(--border); 
-            padding: 30px; width: 500px; text-align: center; box-shadow: 0 0 50px rgba(0,0,0,0.5);
+            background: #1a252f; border: 4px solid var(--border); 
+            padding: 30px; width: 550px; text-align: center; border-radius: 8px;
         }
 
-        .hp-container { width: 400px; height: 30px; background: #34495e; border: 4px solid #000; margin: 20px 0; position: relative; }
-        .hp-fill { height: 100%; background: #2ecc71; width: 100%; transition: 0.2s; }
-        
         .btn { 
-            font-family: 'Press Start 2P'; padding: 15px; border: none; 
-            background: var(--border); color: #2c3e50; cursor: pointer; font-size: 10px; 
-            margin: 10px; transition: 0.1s; border-bottom: 6px solid #bdc3c7;
+            font-family: 'Press Start 2P'; padding: 12px; border: none; 
+            background: var(--border); color: #1a252f; cursor: pointer; font-size: 8px; 
+            margin: 5px; transition: 0.1s; border-bottom: 4px solid #bdc3c7;
         }
-        .btn:hover { transform: translateY(-2px); background: #fff; }
-        .btn:active { transform: translateY(2px); border-bottom-width: 0; }
+        .btn:hover { background: #fff; transform: scale(1.05); }
+        .btn:disabled { background: #555; border-bottom: none; cursor: not-allowed; }
 
         /* --- HUD --- */
         #hud { 
             position: absolute; bottom: 0; width: 100%; background: var(--panel); 
-            padding: 20px 40px; display: flex; justify-content: space-between; align-items: center;
+            padding: 15px 30px; display: flex; justify-content: space-between; align-items: center;
             z-index: 500; border-top: 4px solid var(--accent);
         }
 
-        .stat-label { font-size: 10px; color: var(--accent); margin-bottom: 5px; }
+        .stat-group { display: flex; flex-direction: column; gap: 5px; }
+        .label { font-size: 8px; color: var(--accent); text-transform: uppercase; }
+
+        /* --- FLOATING TEXT --- */
+        .float-text {
+            position: absolute; color: var(--accent); font-size: 10px;
+            animation: floatUp 0.8s ease-out forwards; pointer-events: none; z-index: 3000;
+        }
+        @keyframes floatUp { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-50px); opacity: 0; } }
     </style>
 </head>
 <body onload="init()">
@@ -77,43 +82,56 @@
 
     <div id="battle-screen" class="screen">
         <div class="modal">
-            <h2 style="color:var(--accent)">WILD CONFRONTATION</h2>
-            <div style="height: 180px; display: flex; justify-content: center; align-items: center;">
-                <div id="e-sprite-battle" class="pixel-duck" onclick="clickDamage()" style="position:relative; transform:scale(10) scaleX(-1); cursor:pointer;"></div>
+            <h2 style="color:var(--accent)">ENCOUNTER!</h2>
+            <div id="e-sprite-battle" class="pixel-duck" onclick="clickDamage(event)" style="position:relative; transform:scale(12) scaleX(-1); margin: 60px auto; cursor:crosshair;"></div>
+            <div class="label">Enemy HP</div>
+            <div style="width: 100%; height: 20px; background: #222; border: 2px solid #fff; margin: 10px 0;">
+                <div id="e-hp" style="height:100%; background:#e74c3c; width:100%;"></div>
             </div>
-            <div class="stat-label">ENEMY STAMINA</div>
-            <div class="hp-container"><div id="e-hp" class="hp-fill"></div></div>
-            <p style="font-size: 8px;">(CLICK ENEMY OR LET FRIENDS HELP)</p>
-            <button class="btn" style="background:#e74c3c; color:#fff;" onclick="run()">RETREAT</button>
+            <button class="btn" onclick="run()">RETREAT</button>
         </div>
     </div>
 
     <div id="shop-screen" class="screen">
         <div class="modal">
             <h2 style="color:var(--accent)">DUCK MART</h2>
-            <div style="margin: 20px 0;">
-                <p>BREAD: <span class="bread-val">0</span>🥖</p>
-                <div style="display:grid; grid-template-columns: 1fr; gap: 10px;">
-                    <button class="btn" onclick="buyAuto()">HIRE AUTO-QUACKER (Cost: <span id="auto-cost">100</span>🥖)</button>
-                    <button class="btn" onclick="upgradeAtk()">TRAIN PEAK ATK (Cost: <span id="atk-cost">50</span>🥖)</button>
-                </div>
+            <p>BREAD: <span class="bread-val">0</span>🥖</p>
+            <div style="display:grid; grid-template-columns: 1fr; gap: 10px; margin-bottom: 20px;">
+                <button class="btn" onclick="buyItem('seeds', 30)">BUY PREMIUM SEEDS (30🥖)</button>
+                <button class="btn" onclick="buyItem('auto', 150)">AUTO-QUACKER (150🥖)</button>
             </div>
             <button class="btn" onclick="toggleScreen('shop-screen')">CLOSE</button>
         </div>
     </div>
 
+    <div id="stats-screen" class="screen">
+        <div class="modal">
+            <h2 style="color:var(--accent)">TEAM INFO</h2>
+            <div style="display:flex; justify-content: space-around; align-items: center; margin: 30px 0;">
+                <div class="pixel-duck" style="--c:var(--accent); position:relative; transform:scale(8);"></div>
+                <div style="text-align: left; font-size: 10px; line-height: 2;">
+                    TYPE: <span style="color:var(--accent)">GOLD/CLICKER</span><br>
+                    LVL: <span id="p-lvl">1</span><br>
+                    ATK: <span id="p-atk">2</span><br>
+                    FOOD: <span id="p-food">0</span> BAGS
+                </div>
+            </div>
+            <button class="btn" id="feed-btn" onclick="feedDuck()">FEED (BOOSTS ATK)</button>
+            <button class="btn" onclick="toggleScreen('stats-screen')">CLOSE</button>
+        </div>
+    </div>
+
     <div id="hud">
-        <div>
-            <div class="stat-label">RESOURCES</div>
-            <div>🥖 <span class="bread-val">0</span></div>
+        <div class="stat-group">
+            <div class="label">Inventory</div>
+            <div>🥖 <span class="bread-val">0</span> | 📦 <span id="food-count">0</span></div>
         </div>
-        <div>
-            <div class="stat-label">FRIENDS</div>
-            <div>🤖 <span id="auto-count">0</span> QUACKERS</div>
+        <div style="display: flex; gap: 10px;">
+            <button class="btn" onclick="toggleScreen('shop-screen')">SHOP</button>
+            <button class="btn" onclick="toggleScreen('stats-screen')">TEAM</button>
         </div>
-        <button class="btn" onclick="toggleScreen('shop-screen')">OPEN SHOP</button>
-        <div>
-            <div class="stat-label">LOCATION</div>
+        <div class="stat-group" style="text-align: right;">
+            <div class="label">Location</div>
             <div id="coords">0, 0</div>
         </div>
     </div>
@@ -121,18 +139,19 @@
 
 <script>
     let pos = { x: 0, y: 0 };
-    let player = { bread: 0, atk: 2, autos: 0, autoCost: 100, atkCost: 50 };
+    let player = { bread: 50, atk: 2, autos: 0, seeds: 0, lvl: 1 };
     let enemy = null;
     let rendered = {};
 
     function init() {
         renderMap();
-        setInterval(autoTick, 1000); // Auto-clickers work every second
+        setInterval(() => { if(enemy) { enemy.hp -= (player.autos * 3); checkVictory(); } }, 1000);
         window.addEventListener('keydown', (e) => {
             if(document.querySelector('.screen[style*="display: flex"]')) return;
             const k = e.key.toLowerCase();
-            if(k === 'w') pos.y += 64; if(k === 's') pos.y -= 64;
-            if(k === 'a') pos.x -= 64; if(k === 'd') pos.x += 64;
+            const s = 64;
+            if(k === 'w') pos.y += s; if(k === 's') pos.y -= s;
+            if(k === 'a') pos.x -= s; if(k === 'd') pos.x += s;
             renderMap();
             if(Math.random() < 0.08) startBattle();
         });
@@ -166,21 +185,69 @@
         updateUI();
     }
 
-    function clickDamage() {
+    function clickDamage(e) {
         if(!enemy) return;
         enemy.hp -= player.atk;
         player.bread += 1;
+        createFloat(e.clientX, e.clientY, "+1🥖");
         checkVictory();
     }
 
-    function autoTick() {
-        if(enemy && player.autos > 0) {
-            enemy.hp -= (player.autos * 2);
-            checkVictory();
+    function createFloat(x, y, text) {
+        const el = document.createElement('div');
+        el.className = 'float-text';
+        el.innerText = text;
+        el.style.left = x + 'px'; el.style.top = y + 'px';
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 800);
+    }
+
+    function feedDuck() {
+        if(player.seeds > 0) {
+            player.seeds--;
+            player.atk += 1;
+            player.lvl++;
+            alert("Nom nom! Your Duck grew stronger!");
+            updateUI();
+        } else {
+            alert("No seeds left! Buy some at the Shop.");
         }
+    }
+
+    function buyItem(type, cost) {
+        if(player.bread >= cost) {
+            player.bread -= cost;
+            if(type === 'seeds') player.seeds++;
+            if(type === 'auto') player.autos++;
+            updateUI();
+        } else { alert("Not enough bread!"); }
     }
 
     function checkVictory() {
         if(enemy && enemy.hp <= 0) {
-            player.bread += 50;
-            enemy = null
+            player.bread += 30;
+            enemy = null;
+            document.getElementById('battle-screen').style.display = 'none';
+        }
+        updateUI();
+    }
+
+    function updateUI() {
+        document.querySelectorAll('.bread-val').forEach(el => el.innerText = player.bread);
+        document.getElementById('food-count').innerText = player.seeds;
+        document.getElementById('p-food').innerText = player.seeds;
+        document.getElementById('p-atk').innerText = player.atk;
+        document.getElementById('p-lvl').innerText = player.lvl;
+        if(enemy) document.getElementById('e-hp').style.width = enemy.hp + '%';
+    }
+
+    function toggleScreen(id) {
+        const s = document.getElementById(id);
+        s.style.display = (s.style.display === 'flex') ? 'none' : 'flex';
+        updateUI();
+    }
+
+    function run() { enemy = null; document.getElementById('battle-screen').style.display = 'none'; }
+</script>
+</body>
+</html>
