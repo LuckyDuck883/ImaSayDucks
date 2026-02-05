@@ -3,114 +3,160 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Duckémon: 1000 Varieties</title>
+    <title>Duckémon: Battle League</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
-        :root { --gb-green: #88c070; --gb-dark: #306230; --panel: #333; }
-        body { 
-            font-family: 'Press Start 2P', cursive; background: #1a1a1a; color: white; 
-            margin: 0; display: flex; flex-direction: column; align-items: center;
-        }
-
-        #screen { 
-            width: 90vw; max-width: 500px; height: 400px; background: var(--gb-green);
-            border: 12px solid #555; position: relative; overflow: hidden; margin-top: 20px;
-        }
-
-        /* The Procedural Duck */
-        .duck-spawn { position: absolute; cursor: pointer; transition: transform 0.1s; }
+        :root { --gb-green: #9bbc0f; --dark: #0f380f; --accent: #ffcc00; }
+        body { font-family: 'Press Start 2P', cursive; background: #111; color: white; text-align: center; font-size: 10px; margin: 0; }
         
-        /* Our 16x16 Pixel Master Sprite */
-        .pixel-sprite {
-            width: 4px; height: 4px; transform: scale(3);
-            box-shadow: 
-                8px 4px black, 12px 4px black, 16px 4px black,
-                4px 8px black, 8px 8px var(--d-color), 12px 8px var(--d-color), 16px 8px var(--d-color), 20px 8px black,
-                4px 12px black, 8px 12px var(--d-color), 12px 12px var(--d-color), 16px 12px var(--d-color), 20px 12px var(--d-color), 24px 12px black,
-                4px 16px #FF8C00, 8px 16px black, 12px 16px var(--d-color), 16px 16px var(--d-color), 20px 16px var(--d-color), 24px 16px black,
-                8px 20px black, 12px 20px var(--d-color), 16px 20px var(--d-color), 20px 20px black,
-                12px 24px black, 16px 24px black;
-        }
+        /* Layout */
+        #game-screen { width: 95vw; max-width: 500px; height: 400px; background: var(--gb-green); border: 10px solid #333; margin: 10px auto; position: relative; overflow: hidden; color: var(--dark); }
+        #battle-ui { display: none; position: absolute; bottom: 0; width: 100%; height: 40%; background: #fff; border-top: 4px solid var(--dark); z-index: 10; padding: 10px; box-sizing: border-box; }
+        
+        /* Sprites */
+        .pixel-duck { width: 4px; height: 4px; transform: scale(3.5); position: absolute; transition: all 0.3s; }
+        .player-duck { bottom: 60px; left: 40px; transform: scale(4) scaleX(-1); }
+        .enemy-duck { top: 60px; right: 60px; transform: scale(5); }
+        
+        /* Box Shadow Sprite Logic */
+        .sprite-data { box-shadow: 8px 4px black, 12px 4px black, 16px 4px black, 4px 8px black, 8px 8px var(--c), 12px 8px var(--c), 16px 8px var(--c), 20px 8px black, 4px 12px black, 8px 12px var(--c), 12px 12px var(--c), 16px 12px var(--c), 20px 12px var(--c), 24px 12px black, 4px 16px #f80, 8px 16px black, 12px 16px var(--c), 16px 16px var(--c), 20px 16px var(--c), 24px 16px black, 8px 20px black, 12px 20px var(--c), 16px 20px var(--c), 20px 20px black, 12px 24px black, 16px 24px black; }
 
-        /* Aura effects for different "Types" */
-        .aura-fire { filter: drop-shadow(0 0 8px #ff4d4d) hue-rotate(320deg); }
-        .aura-ghost { filter: drop-shadow(0 0 8px #9d4edd) invert(1); opacity: 0.7; }
-        .aura-golden { filter: drop-shadow(0 0 10px gold) saturate(5); }
-        .aura-poison { filter: drop-shadow(0 0 8px #70e000) hue-rotate(90deg); }
-
-        #stats-ui { width: 90vw; max-width: 500px; background: var(--panel); padding: 15px; border: 4px solid #000; margin-top: 10px; }
-        .log-box { font-size: 8px; color: #0f0; background: #000; padding: 10px; height: 50px; border: 2px solid #555; margin-top: 10px; }
+        /* UI Components */
+        .btn { background: #eee; border: 3px solid #000; padding: 8px; cursor: pointer; font-family: inherit; font-size: 8px; margin: 5px; }
+        .hp-bar { width: 100px; height: 10px; background: #444; border: 2px solid var(--dark); display: inline-block; }
+        .hp-fill { height: 100%; background: #2ecc71; transition: width 0.3s; }
     </style>
 </head>
 <body>
 
-    <div id="screen"></div>
+    <div id="game-screen">
+        <div id="overworld"></div>
 
-    <div id="stats-ui">
-        <div style="display:flex; justify-content: space-between; font-size: 10px;">
-            <span>BREAD: <span id="bread">0</span></span>
-            <span>UNIQUES: <span id="unique">0</span></span>
+        <div id="battle-scene" style="display:none;">
+            <div style="position:absolute; top:20px; left:20px; text-align:left;">
+                <span id="enemy-name">BOSS</span><br>
+                <div class="hp-bar"><div id="enemy-hp" class="hp-fill" style="width:100%"></div></div>
+            </div>
+            
+            <div id="enemy-sprite-cont" class="pixel-duck enemy-duck sprite-data" style="--c:#f00"></div>
+            <div id="player-sprite-cont" class="pixel-duck player-duck sprite-data" style="--c:#ff0"></div>
+
+            <div style="position:absolute; bottom:20px; right:20px; text-align:right;">
+                <span id="player-duck-name">DUCKY</span><br>
+                <div class="hp-bar"><div id="player-hp" class="hp-fill" style="width:100%"></div></div>
+            </div>
+
+            <div id="battle-ui">
+                <div id="battle-msg" style="margin-bottom:10px;">What will DUCKY do?</div>
+                <button class="btn" onclick="attack()">QUACK ATTACK</button>
+                <button class="btn" onclick="evolveDuck()">EVOLVE</button>
+            </div>
         </div>
-        <div id="log-box">Scanning for wild Duckémon...</div>
+    </div>
+
+    <div id="controls">
+        <p>BREAD: <span id="bread-count">0</span> | PARTY: <span id="party-size">0</span>/3</p>
+        <div id="party-list"></div>
     </div>
 
     <script>
-        let bread = 0;
-        let seenDucks = new Set();
-        const colors = ['#FFD700', '#4cc9f0', '#ff4d4d', '#70e000', '#9d4edd', '#ffffff', '#ff85a1', '#48cae4', '#fb8500', '#023e8a'];
-        const prefixes = ["Mega", "Shadow", "Shiny", "Ancient", "Cyber", "Mystic", "Turbo", "Cosmic", "Primal", "Ghost"];
-        const suffixes = ["Quack", "Waddler", "Honker", "Drake", "Paddler", "Diver", "Bill", "Wing", "Float", "Mage"];
+        let gameState = { bread: 0, party: [], enemyHP: 100, playerHP: 100 };
+        const colors = ['#FFD700', '#4cc9f0', '#ff4d4d', '#70e000', '#9d4edd'];
 
-        function spawnDuck() {
-            const screen = document.getElementById('screen');
+        function spawnOverworldDuck() {
+            if (document.getElementById('battle-scene').style.display === 'block') return;
+            const ow = document.getElementById('overworld');
+            const d = document.createElement('div');
+            const color = colors[Math.floor(Math.random()*colors.length)];
+            d.className = 'pixel-duck sprite-data';
+            d.style.cssText = `--c:${color}; left:${Math.random()*80}%; top:${Math.random()*60}%; cursor:pointer;`;
             
-            // Generate a "Unique" Duck from 1000+ combinations
-            // 10 Prefixes * 10 Suffixes * 10 Colors = 1000 combinations
-            const pIdx = Math.floor(Math.random() * prefixes.length);
-            const sIdx = Math.floor(Math.random() * suffixes.length);
-            const cIdx = Math.floor(Math.random() * colors.length);
-            
-            const duckName = prefixes[pIdx] + " " + suffixes[sIdx];
-            const duckColor = colors[cIdx];
-            const duckID = `${pIdx}-${sIdx}-${cIdx}`; // Unique ID for Bestiary
-
-            const container = document.createElement('div');
-            container.className = 'duck-spawn';
-            
-            // Randomly assign a visual aura based on prefix
-            let auraClass = '';
-            if (pIdx === 1) auraClass = 'aura-ghost';
-            if (pIdx === 2) auraClass = 'aura-golden';
-            if (pIdx === 8) auraClass = 'aura-fire';
-            if (pIdx === 5) auraClass = 'aura-poison';
-
-            container.innerHTML = `<div class="pixel-sprite ${auraClass}" style="--d-color: ${duckColor}"></div>`;
-            container.style.left = Math.random() * 80 + '%';
-            container.style.top = Math.random() * 70 + '%';
-
-            container.onclick = () => {
-                bread += 10;
-                if(!seenDucks.has(duckID)) {
-                    seenDucks.add(duckID);
-                    log(`NEW DISCOVERY! Caught ${duckName}!`);
+            d.onclick = () => {
+                if (gameState.party.length < 3) {
+                    let name = prompt("You caught it! Name your Duck:", "Quackers");
+                    gameState.party.push({ name: name || "Ducky", color: color, lvl: 1 });
+                    log(`Added ${name} to party!`);
                 } else {
-                    log(`Caught another ${duckName}.`);
+                    gameState.bread += 20;
+                    log("Party full! Converted to 20 Bread.");
                 }
+                d.remove();
                 updateUI();
-                container.remove();
+                if (gameState.party.length === 3) startBattle();
             };
-
-            screen.appendChild(container);
-            setTimeout(() => { if(container.parentNode) container.remove(); }, 3000);
+            ow.appendChild(d);
+            setTimeout(() => d.remove(), 3000);
         }
 
-        function log(m) { document.getElementById('log-box').innerText = m; }
+        function startBattle() {
+            document.getElementById('overworld').style.display = 'none';
+            document.getElementById('battle-scene').style.display = 'block';
+            document.getElementById('battle-ui').style.display = 'block';
+            
+            const active = gameState.party[0];
+            document.getElementById('player-duck-name').innerText = active.name;
+            document.getElementById('player-sprite-cont').style.setProperty('--c', active.color);
+            gameState.enemyHP = 100;
+            gameState.playerHP = 100;
+            updateHP();
+        }
+
+        function attack() {
+            // Player attacks
+            let dmg = 15 + (gameState.party[0].lvl * 5);
+            gameState.enemyHP -= dmg;
+            log(`Enemy took ${dmg} damage!`);
+            
+            // Enemy attacks back
+            setTimeout(() => {
+                if (gameState.enemyHP <= 0) {
+                    log("VICTORY! Gained 100 Bread.");
+                    gameState.bread += 100;
+                    endBattle();
+                    return;
+                }
+                gameState.playerHP -= 10;
+                log("Enemy used PECK! -10HP");
+                updateHP();
+                if (gameState.playerHP <= 0) {
+                    log("Your duck fainted! Resetting party.");
+                    gameState.party = [];
+                    endBattle();
+                }
+            }, 800);
+            updateHP();
+        }
+
+        function evolveDuck() {
+            if (gameState.bread >= 50) {
+                gameState.bread -= 50;
+                gameState.party[0].lvl++;
+                log(`${gameState.party[0].name} evolved to Lv.${gameState.party[0].lvl}!`);
+                updateUI();
+            } else {
+                log("Need 50 Bread to evolve!");
+            }
+        }
+
+        function endBattle() {
+            document.getElementById('battle-scene').style.display = 'none';
+            document.getElementById('overworld').style.display = 'block';
+            updateUI();
+        }
+
+        function updateHP() {
+            document.getElementById('enemy-hp').style.width = gameState.enemyHP + '%';
+            document.getElementById('player-hp').style.width = gameState.playerHP + '%';
+        }
+
         function updateUI() {
-            document.getElementById('bread').innerText = bread;
-            document.getElementById('unique').innerText = seenDucks.size;
+            document.getElementById('bread-count').innerText = gameState.bread;
+            document.getElementById('party-size').innerText = gameState.party.length;
         }
 
-        setInterval(spawnDuck, 1200);
+        function log(m) { document.getElementById('battle-msg').innerText = m; }
+
+        setInterval(spawnOverworldDuck, 2000);
     </script>
 </body>
 </html>
