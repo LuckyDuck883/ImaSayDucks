@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Duckémon: Nexus</title>
+    <title>Duckémon: Prism Nexus</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         :root { 
             --grass: #78C850; --forest: #45a049; --sand: #F0D060; --water: #6890F0;
-            --ui-bg: #f8f8f8; --ui-border: #706880; --pokedred: #ff1111;
+            --ui-bg: #f8f8f8; --ui-border: #706880;
         }
         * { box-sizing: border-box; touch-action: manipulation; user-select: none; }
         body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; font-family: 'Press Start 2P', cursive; overflow: hidden; }
@@ -31,25 +31,20 @@
         .tall-grass-clip { clip-path: inset(0% 0% 35% 0%); }
         #player-container { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 1000; }
 
-        /* --- CHAT SYSTEM --- */
-        #chat-box { position: absolute; bottom: 80px; left: 10px; width: 250px; height: 150px; background: rgba(0,0,0,0.7); border: 2px solid #fff; z-index: 2000; display: flex; flex-direction: column; padding: 5px; }
-        #chat-log { flex-grow: 1; overflow-y: auto; font-size: 6px; color: #fff; margin-bottom: 5px; line-height: 1.4; }
-        #chat-input { background: #000; border: 1px solid #fff; color: #fff; font-family: 'Press Start 2P'; font-size: 6px; padding: 5px; outline: none; }
+        /* --- CHAT & TRADE --- */
+        #chat-box { position: absolute; bottom: 80px; left: 10px; width: 280px; height: 160px; background: rgba(0,0,0,0.8); border: 3px solid #fff; z-index: 2000; display: flex; flex-direction: column; padding: 8px; }
+        #chat-log { flex-grow: 1; overflow-y: auto; font-size: 7px; color: #fff; line-height: 1.6; }
+        .trade-link { color: #f1c40f; text-decoration: underline; cursor: pointer; margin-left: 5px; }
 
         /* --- INVENTORY --- */
-        .screen { position: absolute; inset: 0; z-index: 3000; display: none; background: rgba(0,0,0,0.85); align-items: center; justify-content: center; }
-        .modal { background: var(--ui-bg); border: 6px double var(--ui-border); padding: 20px; width: 90%; max-width: 400px; color: #333; }
+        .screen { position: absolute; inset: 0; z-index: 3000; display: none; background: rgba(0,0,0,0.9); align-items: center; justify-content: center; }
+        .modal { background: var(--ui-bg); border: 6px double var(--ui-border); padding: 20px; width: 90%; max-width: 420px; color: #333; }
         .inv-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 15px 0; }
-        .inv-slot { width: 100%; aspect-ratio: 1; background: #ddd; border: 2px solid #777; display: flex; align-items: center; justify-content: center; position: relative; }
-
-        /* --- BATTLE --- */
-        #battle-screen { background: #98D8D8; flex-direction: column; }
-        .hp-plate { background: #fff; border: 3px solid #333; padding: 8px; width: 140px; font-size: 7px; }
-        .hp-fill { height: 6px; background: #4CAF50; width: 100%; transition: width 0.3s; }
+        .inv-slot { width: 100%; aspect-ratio: 1; background: #ddd; border: 2px solid #777; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 5px; }
 
         /* --- HUD --- */
-        #hud { position: absolute; top: 10px; width: 100%; display: flex; justify-content: space-around; font-size: 8px; z-index: 1500; background: rgba(255,255,255,0.8); padding: 10px; border-bottom: 3px solid #333; }
-        .btn { font-family: 'Press Start 2P'; font-size: 8px; padding: 8px; cursor: pointer; border: 3px solid #333; }
+        #hud { position: absolute; top: 10px; width: 100%; display: flex; justify-content: space-around; font-size: 8px; z-index: 1500; background: rgba(255,255,255,0.9); padding: 10px; border-bottom: 3px solid #333; }
+        .btn { font-family: 'Press Start 2P'; font-size: 8px; padding: 8px; cursor: pointer; border: 3px solid #333; background: #fff; }
     </style>
 </head>
 <body onload="init()">
@@ -59,64 +54,69 @@
     <div id="player-container"><div id="p-sprite" class="pixel-art" style="--c:#f1c40f"></div></div>
 
     <div id="hud">
-        <span>🥖: <span id="bread">0</span></span>
-        <span>LVL: <span id="lvl">1</span></span>
-        <button class="btn" onclick="toggleScreen('inv-screen')">BAG</button>
+        <span>🥖: <span id="bread">100</span></span>
+        <button class="btn" onclick="toggleScreen('inv-screen')">INVENTORY</button>
     </div>
 
     <div id="chat-box">
         <div id="chat-log"></div>
-        <input type="text" id="chat-input" placeholder="SAY SOMETHING..." onkeydown="if(event.key==='Enter') sendChat()">
+        <input type="text" id="chat-input" placeholder="TYPE HERE..." onkeydown="if(event.key==='Enter') sendChat()" style="background:#000; color:#fff; font-family:'Press Start 2P'; font-size:7px; border:1px solid #fff; padding:5px; margin-top:5px;">
     </div>
 
     <div id="inv-screen" class="screen">
         <div class="modal">
-            <h2 style="font-size:10px;">INVENTORY</h2>
+            <h2 style="font-size:10px; text-align:center;">COLLECTION</h2>
             <div class="inv-grid" id="inventory-slots"></div>
-            <button class="btn" onclick="toggleScreen('inv-screen')">CLOSE</button>
+            <button class="btn" onclick="toggleScreen('inv-screen')" style="width:100%">BACK</button>
         </div>
     </div>
 
-    <div id="battle-screen" class="screen">
-        <div style="flex:1; display:flex; justify-content:space-around; align-items:center; width:100%;">
-            <div class="hp-plate">WILD DUCK<div style="background:#ccc; height:6px;"><div id="e-hp" class="hp-fill"></div></div></div>
-            <div id="e-sprite-battle" class="pixel-art" style="position:relative; transform:scale(6)"></div>
+    <div id="battle-screen" class="screen" style="background:#98D8D8;">
+        <div style="flex:1; width:100%; display:flex; justify-content:space-around; align-items:center;">
+             <div style="text-align:center;">
+                <p id="e-name" style="font-size:8px; color:#000;"></p>
+                <div id="e-hp-bar" style="width:100px; height:8px; background:#444; border:2px solid #000;"><div id="e-hp-fill" style="width:100%; height:100%; background:#4CAF50;"></div></div>
+                <div id="e-sprite-battle" class="pixel-art" style="position:relative; transform:scale(7); margin-top:50px;"></div>
+             </div>
         </div>
-        <div style="flex:1; display:flex; flex-direction:column; background:#fff; width:100%; padding:20px; border-top:5px solid #333;">
-            <div class="inv-grid">
-                <button class="btn" onclick="battleAction('tackle')">TACKLE</button>
-                <button class="btn" onclick="battleAction('catch')">CATCH</button>
-                <button class="btn" onclick="battleAction('run')">RUN</button>
-            </div>
+        <div style="height:150px; width:100%; background:#fff; border-top:6px solid #333; display:grid; grid-template-columns:1fr 1fr; gap:10px; padding:20px;">
+            <button class="btn" onclick="battleAction('tackle')">TACKLE</button>
+            <button class="btn" onclick="battleAction('catch')">CATCH</button>
         </div>
     </div>
 </div>
 
 <script>
-    let player = { x: 0, y: 0, c: '#f1c40f', bread: 100, lvl: 1, inv: [] };
-    let enemy = { hp: 100, c: '#ff0000' };
-    let rendered = {};
+    const DUCK_TYPES = [
+        { name: "Pebble", color: "#95a5a6", biome: "t-grass", rarity: 0.8 },
+        { name: "Inferno", color: "#e74c3c", biome: "t-forest", rarity: 0.3 },
+        { name: "Tidal", color: "#3498db", biome: "t-water", rarity: 0.4 },
+        { name: "Cactus", color: "#27ae60", biome: "t-sand", rarity: 0.5 },
+        { name: "Void", color: "#8e44ad", biome: "t-forest", rarity: 0.1 },
+        { name: "Neon", color: "#2ecc71", biome: "t-grass", rarity: 0.2 },
+        { name: "Cosmic", color: "#f1c40f", biome: "any", rarity: 0.05 }
+    ];
 
-    const BOTS = ["Ash_Duck", "DuckoMode", "WaddleWarrior", "Gary_Quack"];
-    const QUOTES = ["Just found a Flame Duck!", "Anyone want to trade?", "This route is infinite...", "Quack!"];
+    let player = { x: 0, y: 0, c: '#f1c40f', bread: 100, inv: [] };
+    let currentEnemy = null;
+    let rendered = {};
 
     function init() {
         renderWorld();
         setupInventory();
-        setInterval(botChat, 5000);
+        setInterval(botAction, 6000);
         window.addEventListener('keydown', e => {
             if(document.activeElement.id === 'chat-input') return;
             const k = e.key.toLowerCase();
-            if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(k)) {
-                let mx=0, my=0;
-                if(k==='w'||k==='arrowup') my=64; if(k==='s'||k==='arrowdown') my=-64;
-                if(k==='a'||k==='arrowleft') mx=-64; if(k==='d'||k==='arrowright') mx=64;
-                move(mx, my);
-            }
+            let mx=0, my=0;
+            if(k==='w'||k==='arrowup') my=64; if(k==='s'||k==='arrowdown') my=-64;
+            if(k==='a'||k==='arrowleft') mx=-64; if(k==='d'||k==='arrowright') mx=64;
+            if(mx!==0 || my!==0) move(mx, my);
         });
     }
 
     function move(mx, my) {
+        if(document.getElementById('battle-screen').style.display === 'flex') return;
         player.x += mx; player.y += my;
         if(mx !== 0) document.getElementById('p-sprite').style.transform = `scale(3) scaleX(${mx > 0 ? 1 : -1})`;
         renderWorld();
@@ -124,7 +124,15 @@
         let tx = Math.floor(player.x/64), ty = Math.floor(player.y/64);
         let t = getTerrain(tx, ty);
         document.getElementById('p-sprite').className = (t==='t-forest') ? 'pixel-art tall-grass-clip' : 'pixel-art';
-        if(t==='t-forest' && Math.random() < 0.1) startBattle();
+        if(t==='t-forest' && Math.random() < 0.12) startBattle(t);
+    }
+
+    function getTerrain(x, y) {
+        let n = Math.abs(Math.sin(x*0.1) + Math.cos(y*0.1));
+        if(n > 1.3) return 't-water';
+        if(n > 1.0) return 't-forest';
+        if(n < 0.3) return 't-sand';
+        return 't-grass';
     }
 
     function renderWorld() {
@@ -144,12 +152,33 @@
         w.style.transform = `translate(${-player.x + window.innerWidth/2}px, ${player.y + window.innerHeight/2}px)`;
     }
 
-    function getTerrain(x, y) {
-        let n = Math.abs(Math.sin(x*0.1) + Math.cos(y*0.1));
-        if(n > 1.3) return 't-water';
-        if(n > 1.0) return 't-forest';
-        if(n < 0.3) return 't-sand';
-        return 't-grass';
+    // --- BATTLE ---
+    function startBattle(biome) {
+        let possible = DUCK_TYPES.filter(d => d.biome === biome || d.biome === 'any');
+        currentEnemy = {...possible[Math.floor(Math.random()*possible.length)], hp: 100};
+        document.getElementById('battle-screen').style.display = 'flex';
+        document.getElementById('e-name').innerText = currentEnemy.name.toUpperCase() + " DUCK";
+        document.getElementById('e-sprite-battle').style.setProperty('--c', currentEnemy.color);
+        updateBattleUI();
+    }
+
+    function battleAction(type) {
+        if(type === 'tackle') {
+            currentEnemy.hp -= 35;
+            if(currentEnemy.hp <= 0) { alert("Victory!"); player.bread += 50; endBattle(); }
+        } else if(type === 'catch') {
+            if(currentEnemy.hp < 60 && Math.random() > 0.4) {
+                alert("Caught " + currentEnemy.name + "!");
+                player.inv.push({...currentEnemy}); setupInventory(); endBattle();
+            } else alert("Escaped!");
+        }
+        updateBattleUI();
+    }
+
+    function endBattle() { document.getElementById('battle-screen').style.display = 'none'; updateBattleUI(); }
+    function updateBattleUI() { 
+        if(currentEnemy) document.getElementById('e-hp-fill').style.width = currentEnemy.hp + '%'; 
+        document.getElementById('bread').innerText = player.bread;
     }
 
     // --- SYSTEMS ---
@@ -160,61 +189,47 @@
             let slot = document.createElement('div');
             slot.className = 'inv-slot';
             if(player.inv[i]) {
-                slot.innerHTML = `<div class="pixel-art" style="--c:${player.inv[i]}; transform:scale(1.5); position:relative;"></div>`;
+                slot.innerHTML = `<div class="pixel-art" style="--c:${player.inv[i].color}; transform:scale(1.2); position:relative;"></div><p>${player.inv[i].name}</p>`;
             }
             grid.appendChild(slot);
         }
     }
 
-    function sendChat() {
-        const input = document.getElementById('chat-input');
-        if(input.value.trim()) {
-            addChat("YOU", input.value);
-            input.value = "";
-        }
-    }
-
-    function addChat(user, msg) {
+    function botAction() {
+        const bots = ["Gary_Beak", "Ash_Waddle", "Misty_Quack"];
+        const bot = bots[Math.floor(Math.random()*bots.length)];
+        const want = DUCK_TYPES[Math.floor(Math.random()*DUCK_TYPES.length)].name;
+        const offer = DUCK_TYPES[Math.floor(Math.random()*DUCK_TYPES.length)];
+        
         const log = document.getElementById('chat-log');
-        log.innerHTML += `<div><span style="color:#f1c40f">${user}:</span> ${msg}</div>`;
+        const line = document.createElement('div');
+        line.innerHTML = `<span style="color:#e74c3c">${bot}:</span> Want ${want}? Offering ${offer.name}. <span class="trade-link" onclick="trade('${want}','${offer.name}','${offer.color}')">[TRADE]</span>`;
+        log.appendChild(line);
         log.scrollTop = log.scrollHeight;
     }
 
-    function botChat() {
-        const bot = BOTS[Math.floor(Math.random()*BOTS.length)];
-        const msg = QUOTES[Math.floor(Math.random()*QUOTES.length)];
-        addChat(bot, msg);
+    function trade(want, offerName, offerColor) {
+        let idx = player.inv.findIndex(d => d.name === want);
+        if(idx !== -1) {
+            player.inv.splice(idx, 1, {name: offerName, color: offerColor});
+            alert("Trade Successful!"); setupInventory();
+        } else {
+            alert("You don't have a " + want + " to trade!");
+        }
     }
 
-    function startBattle() {
-        enemy.hp = 100;
-        enemy.c = ['#ff6b6b','#4ecdc4','#9b59b6','#fff'][Math.floor(Math.random()*4)];
-        document.getElementById('battle-screen').style.display = 'flex';
-        document.getElementById('e-sprite-battle').style.setProperty('--c', enemy.c);
-        updateBattleUI();
+    function sendChat() {
+        const input = document.getElementById('chat-input');
+        if(!input.value) return;
+        const log = document.getElementById('chat-log');
+        log.innerHTML += `<div><span style="color:#2ecc71">YOU:</span> ${input.value}</div>`;
+        input.value = "";
+        log.scrollTop = log.scrollHeight;
     }
 
-    function battleAction(type) {
-        if(type === 'tackle') {
-            enemy.hp -= 30;
-            if(enemy.hp <= 0) { alert("Victory!"); player.bread += 50; endBattle(); }
-        } else if(type === 'catch') {
-            if(enemy.hp < 50 && Math.random() > 0.4) {
-                alert("Caught!"); player.inv.push(enemy.c); setupInventory(); endBattle();
-            } else alert("It broke free!");
-        } else endBattle();
-        updateBattleUI();
-    }
-
-    function updateBattleUI() {
-        document.getElementById('e-hp').style.width = enemy.hp + '%';
-        document.getElementById('bread').innerText = player.bread;
-    }
-
-    function endBattle() { document.getElementById('battle-screen').style.display = 'none'; }
     function toggleScreen(id) { 
         const s = document.getElementById(id); 
-        s.style.display = (s.style.display==='flex') ? 'none' : 'flex'; 
+        s.style.display = (s.style.display==='flex'?'none':'flex'); 
     }
 </script>
 </body>
