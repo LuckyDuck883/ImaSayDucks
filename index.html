@@ -3,157 +3,167 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Duckémon: Open World Explorer</title>
+    <title>Duckémon: World Explorer</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
-        :root { --grass: #70e000; --water: #48cae4; --dark: #1a1a1a; --player: #ffcc00; }
-        body { margin: 0; background: #000; font-family: 'Press Start 2P', cursive; overflow: hidden; color: white; display: flex; flex-direction: column; align-items: center; }
+        :root { --grass: #91d18b; --water: #4cc9f0; --fire: #e63946; --panel: #f1f2f6; }
+        body { margin: 0; background: #222; font-family: 'Press Start 2P', cursive; color: #333; display: flex; flex-direction: column; align-items: center; }
 
-        /* --- THE OVERWORLD --- */
-        #world-container {
-            width: 350px; height: 350px;
-            background: var(--grass);
-            position: relative; overflow: hidden;
-            border: 8px solid #444; margin-top: 20px;
+        /* --- THE DUCK SPRITE --- */
+        .duck {
+            position: relative; width: 40px; height: 35px;
+            background: var(--c, #ffcc00); border-radius: 20px 20px 10px 10px;
+            box-shadow: inset -4px -4px 0 rgba(0,0,0,0.1);
+        }
+        .duck::before { content: ''; position: absolute; width: 15px; height: 10px; background: #fb8500; right: -8px; top: 12px; border-radius: 0 10px 10px 0; } /* Beak */
+        .duck::after { content: ''; position: absolute; width: 5px; height: 5px; background: #000; right: 8px; top: 8px; border-radius: 50%; } /* Eye */
+        .wing { position: absolute; width: 20px; height: 12px; background: rgba(0,0,0,0.1); left: 5px; top: 15px; border-radius: 10px; }
+
+        /* --- GAME SCREENS --- */
+        #viewport {
+            width: 360px; height: 360px; border: 8px solid #444; 
+            position: relative; overflow: hidden; background: var(--grass); margin-top: 10px;
         }
 
-        /* Decorative "Grass" patches that trigger battles */
-        .tall-grass { position: absolute; width: 50px; height: 50px; background: #55a600; opacity: 0.5; border-radius: 10px; }
-
-        /* --- THE PLAYER --- */
-        #player {
-            width: 32px; height: 32px; background: var(--player);
-            position: absolute; transition: all 0.1s linear;
-            clip-path: polygon(25% 0%, 75% 0%, 100% 25%, 100% 100%, 0% 100%, 0% 25%);
-            z-index: 10; border-radius: 5px;
+        #battle-overlay {
+            display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: #fff; z-index: 100; flex-direction: column; align-items: center; justify-content: space-around;
         }
 
-        /* --- BATTLE SCREEN --- */
-        #battle-screen {
-            display: none; position: absolute; top: 0; left: 0;
-            width: 100%; height: 100%; background: #fff; color: #000;
-            z-index: 100; flex-direction: column; align-items: center; justify-content: space-around;
+        /* --- STATS MENU --- */
+        #stats-menu {
+            display: none; position: absolute; top: 10%; left: 10%; width: 80%; height: 80%;
+            background: var(--panel); border: 4px solid #333; z-index: 50; padding: 15px; box-sizing: border-box; font-size: 10px;
         }
 
-        .battle-duck { width: 80px; height: 80px; transform: scaleX(-1); }
-        .hp-bar { width: 150px; height: 10px; background: #ccc; border: 2px solid #000; margin-top: 5px; }
-        #enemy-hp-fill { height: 100%; background: #f00; width: 100%; transition: 0.3s; }
-
-        /* --- CONTROLS --- */
-        #ui { width: 350px; padding: 15px; background: #222; border: 4px solid #444; box-sizing: border-box; }
-        .d-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; width: 150px; margin: 10px auto; }
-        .btn { background: #eee; border: 4px solid #aaa; padding: 10px; font-family: inherit; font-size: 8px; cursor: pointer; }
-        .btn:active { background: #ccc; }
-
-        #stats { font-size: 8px; text-align: left; line-height: 1.6; }
+        /* --- UI CONTROLS --- */
+        #hud { width: 376px; background: #333; color: white; padding: 15px; box-sizing: border-box; }
+        .controls { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; margin-top: 10px; }
+        .btn { background: #eee; border: none; border-bottom: 4px solid #999; padding: 10px; font-family: inherit; font-size: 8px; cursor: pointer; }
+        .btn:active { transform: translateY(2px); border-bottom-width: 2px; }
+        
+        .hp-bar { width: 120px; height: 12px; background: #eee; border: 2px solid #000; }
+        .hp-fill { height: 100%; background: #2ecc71; width: 100%; transition: 0.3s; }
     </style>
 </head>
 <body onload="init()">
 
-    <div id="world-container">
-        <div class="tall-grass" style="top:50px; left:50px;"></div>
-        <div class="tall-grass" style="top:200px; left:250px;"></div>
-        <div class="tall-grass" style="top:100px; left:180px;"></div>
-        
-        <div id="player"></div>
+    <div id="viewport">
+        <div id="player" style="position: absolute; transition: 0.1s linear; z-index: 10;">
+            <div class="duck"><div class="wing"></div></div>
+        </div>
 
-        <div id="battle-screen">
-            <div id="battle-msg">WILD DUCK APPEARED!</div>
-            <div id="enemy-sprite" style="background:red; width:60px; height:60px; clip-path: polygon(25% 0%, 75% 0%, 100% 25%, 100% 100%, 0% 100%, 0% 25%);"></div>
-            <div>
-                ENEMY HP
-                <div class="hp-bar"><div id="enemy-hp-fill"></div></div>
-            </div>
-            <button class="btn" onclick="attack()">QUACK ATTACK!</button>
+        <div id="battle-overlay">
+            <div id="enemy-name" style="font-size: 10px;">WILD FIRE DUCK</div>
+            <div id="enemy-sprite"></div>
+            <div>HP: <div class="hp-bar"><div id="enemy-hp" class="hp-fill"></div></div></div>
+            <button class="btn" style="width: 80%; background: #ff4757; color: white;" onclick="attack()">EMBER PEAK</button>
+        </div>
+
+        <div id="stats-menu">
+            <h3 style="text-align:center">DUCK STATS</h3>
+            <hr>
+            <p>NAME: <span id="s-name">PUDDLES</span></p>
+            <p>LVL: <span id="s-lvl">1</span></p>
+            <p>TYPE: <span id="s-type">WATER</span></p>
+            <p>STR: <span id="s-str">10</span></p>
+            <p>WINS: <span id="s-wins">0</span></p>
+            <button class="btn" style="width:100%" onclick="toggleStats()">CLOSE</button>
         </div>
     </div>
 
-    <div id="ui">
-        <div id="stats">
-            NAME: PLAYER<br>
-            LVL: <span id="lvl">1</span> | XP: <span id="xp">0</span>/50
+    <div id="hud">
+        <div style="display:flex; justify-content: space-between; font-size: 8px;">
+            <span>LOCATION: <span id="loc">FOREST</span></span>
+            <span>BREAD: <span id="bread">0</span></span>
         </div>
         
-        <div class="d-pad">
-            <div></div><button class="btn" onclick="move(0, -30)">UP</button><div></div>
-            <button class="btn" onclick="move(-30, 0)">LFT</button><div></div><button class="btn" onclick="move(30, 0)">RGT</button>
-            <div></div><button class="btn" onclick="move(0, 30)">DWN</button><div></div>
+        <div class="controls">
+            <button class="btn" onclick="toggleStats()">STATS</button>
+            <button class="btn" onclick="move(0, -30)">UP</button>
+            <button class="btn" onclick="saveGame()">SAVE</button>
+            <button class="btn" onclick="move(-30, 0)">LEFT</button>
+            <button class="btn" onclick="move(0, 30)">DOWN</button>
+            <button class="btn" onclick="move(30, 0)">RIGHT</button>
         </div>
     </div>
 
     <script>
         let pPos = { x: 150, y: 150 };
-        let stats = { lvl: 1, xp: 0, next: 50 };
-        let enemyHP = 100;
+        let duck = { name: "Puddles", lvl: 1, xp: 0, bread: 0, wins: 0, type: "WATER" };
+        let enemy = { hp: 100, type: "FIRE" };
 
         function init() {
             updatePlayer();
         }
 
         function move(dx, dy) {
-            if (document.getElementById('battle-screen').style.display === 'flex') return;
-
-            pPos.x = Math.max(0, Math.min(310, pPos.x + dx));
-            pPos.y = Math.max(0, Math.min(310, pPos.y + dy));
+            if (document.getElementById('battle-overlay').style.display === 'flex') return;
+            
+            pPos.x = Math.max(0, Math.min(320, pPos.x + dx));
+            pPos.y = Math.max(0, Math.min(320, pPos.y + dy));
             updatePlayer();
 
-            // Random Battle Encounter Chance
-            if (Math.random() < 0.2) {
-                startBattle();
-            }
+            // Biome Check
+            const loc = pPos.x > 180 ? "VOLCANO" : "FOREST";
+            document.getElementById('loc').innerText = loc;
+            document.getElementById('viewport').style.background = loc === "VOLCANO" ? "#e63946" : "#91d18b";
+
+            // Random Battle
+            if (Math.random() < 0.15) startBattle(loc);
         }
 
         function updatePlayer() {
             const p = document.getElementById('player');
             p.style.left = pPos.x + 'px';
             p.style.top = pPos.y + 'px';
-
-            // Visual evolution
-            if (stats.lvl >= 10) p.style.background = '#4cc9f0';
-            if (stats.lvl >= 25) p.style.background = '#ff4d4d';
-            if (stats.lvl >= 50) p.style.filter = 'drop-shadow(0 0 10px gold)';
         }
 
-        function startBattle() {
-            const screen = document.getElementById('battle-screen');
-            screen.style.display = 'flex';
-            enemyHP = 100;
+        function startBattle(loc) {
+            const overlay = document.getElementById('battle-overlay');
+            overlay.style.display = 'flex';
+            enemy.hp = 100;
+            enemy.type = loc === "VOLCANO" ? "FIRE" : "LEAF";
+            
+            document.getElementById('enemy-name').innerText = `WILD ${enemy.type} DUCK`;
+            document.getElementById('enemy-sprite').innerHTML = `<div class="duck" style="--c: ${enemy.type === 'FIRE' ? '#ff4d4d' : '#70e000'}; transform: scale(1.5) scaleX(-1);"></div>`;
             updateHP();
-            document.getElementById('battle-msg').innerText = "WILD DUCK APPEARED!";
         }
 
         function attack() {
-            enemyHP -= 34; // 3 hits to kill
+            enemy.hp -= (15 + duck.lvl * 2);
             updateHP();
-            
-            if (enemyHP <= 0) {
-                document.getElementById('battle-msg').innerText = "VICTORY!";
-                setTimeout(() => {
-                    gainXP(25);
-                    document.getElementById('battle-screen').style.display = 'none';
-                }, 1000);
+            if (enemy.hp <= 0) {
+                duck.wins++;
+                duck.bread += 10;
+                duck.xp += 40;
+                if(duck.xp >= 100) { duck.lvl++; duck.xp = 0; }
+                alert("Enemy Fainted! Gained XP.");
+                document.getElementById('battle-overlay').style.display = 'none';
+                updateUI();
             }
         }
 
-        function gainXP(amt) {
-            stats.xp += amt;
-            if (stats.xp >= stats.next) {
-                stats.lvl++;
-                stats.xp = 0;
-                stats.next = Math.floor(stats.next * 1.5);
-                alert("LEVEL UP! YOU ARE NOW LVL " + stats.lvl);
-            }
+        function toggleStats() {
+            const m = document.getElementById('stats-menu');
+            m.style.display = m.style.display === 'block' ? 'none' : 'block';
             updateUI();
         }
 
         function updateHP() {
-            document.getElementById('enemy-hp-fill').style.width = enemyHP + '%';
+            document.getElementById('enemy-hp').style.width = enemy.hp + '%';
         }
 
         function updateUI() {
-            document.getElementById('lvl').innerText = stats.lvl;
-            document.getElementById('xp').innerText = stats.xp;
-            updatePlayer();
+            document.getElementById('s-lvl').innerText = duck.lvl;
+            document.getElementById('s-wins').innerText = duck.wins;
+            document.getElementById('s-str').innerText = 10 + (duck.lvl * 2);
+            document.getElementById('bread').innerText = duck.bread;
+        }
+
+        function saveGame() {
+            localStorage.setItem('duckemon_save', JSON.stringify({duck, pPos}));
+            alert("Game Saved!");
         }
     </script>
 </body>
